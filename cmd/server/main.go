@@ -13,6 +13,25 @@ import (
 	"github.com/apex/monitor/pkg/receiver"
 	"github.com/apex/monitor/pkg/storage"
 	apex "github.com/apex/monitor/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+var (
+	reportsReceived = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "apex_reports_received_total",
+		Help: "The total number of crash reports received",
+	})
+	ingestErrors = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "apex_ingest_errors_total",
+		Help: "The total number of ingestion errors",
+	})
+	ingestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "apex_ingest_duration_seconds",
+		Help:    "Time spent unpacking and routing batches",
+		Buckets: prometheus.DefBuckets,
+	})
 )
 
 type Server struct {
@@ -60,6 +79,9 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	timer := prometheus.NewTimer(ingestDuration)
+	defer timer.ObserveDuration()
+
 	// Simple API Key check
 	apiKey := r.Header.Get("X-Apex-API-Key")
 	if apiKey != os.Getenv("APEX_API_KEY") && os.Getenv("APEX_API_KEY") != "" {
@@ -76,6 +98,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	batch, err := s.recv.Unpack(body)
 	if err != nil {
 		slog.Error("Failed to unpack batch", "error", err)
+		ingestErrors.Inc()
 		http.Error(w, "Unpack error", http.StatusBadRequest)
 		return
 	}
@@ -83,6 +106,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	// Offload to workers
 	slog.Info("Batch received", "count", len(batch.Reports))
 	for _, report := range batch.Reports {
+		reportsReceived.Inc()
 		s.jobChan <- report
 	}
 
@@ -181,10 +205,11 @@ func main() {
 	http.HandleFunc("/ingest", srv.handleIngest)
 	http.HandleFunc("/reports", srv.handleGetReports)
 	http.HandleFunc("/api/reports", srv.handleGetReportsJSON)
+	http.Handle("/metrics", promhttp.Handler())
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8081"
 	}
 
 	slog.Info("Apex Production Receiver starting", "port", port)
