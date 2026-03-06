@@ -1,0 +1,197 @@
+{{define "dashboard"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex | Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #121212;
+            --accent: #00f2ff;
+            --accent-glow: rgba(0, 242, 255, 0.3);
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --border: #222;
+            --danger: #ff3e3e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(18, 18, 18, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -1px;
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .status-badge {
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 242, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .header {
+            margin-bottom: 3rem;
+        }
+
+        .header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .header p { color: var(--text-muted); }
+
+        .report-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            background: #181818;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .crash-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .crash-msg {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--danger);
+            margin-bottom: 1rem;
+        }
+
+        .telemetry-bar {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            background: rgba(0,0,0,0.2);
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+
+        .telemetry-item b { color: var(--text); }
+
+        .stack-trace {
+            background: #000;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: #aaa;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            border-left: 3px solid var(--danger);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 5rem;
+            color: var(--text-muted);
+            border: 2px dashed var(--border);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">APEX // MONITOR</div>
+        <div class="status-badge">LIVE_RECEIVER_READY</div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Command Center</h1>
+            <p>Real-time crash surveillance for your production ecosystem.</p>
+        </div>
+
+        <div class="report-grid">
+            {{range .Reports}}
+            <div class="card">
+                <div class="card-header">
+                    <span class="crash-id">ID: {{.ErrorId}}</span>
+                    <span class="crash-id">{{.Timestamp}}</span>
+                </div>
+                <div class="crash-msg">Panic: {{.Message}}</div>
+                
+                <div class="telemetry-bar">
+                    <div class="telemetry-item">OS: <b>{{.Context.Os}}</b></div>
+                    <div class="telemetry-item">Arch: <b>{{.Context.Arch}}</b></div>
+                    <div class="telemetry-item">Memory: <b>{{.Context.TotalMemory}} bytes</b></div>
+                    <div class="telemetry-item">Battery: <b>{{.Context.BatteryLevel}}</b></div>
+                </div>
+
+                <div class="stack-trace">{{.StackTrace}}</div>
+            </div>
+            {{else}}
+            <div class="empty-state">
+                <h2>System Quiet</h2>
+                <p>No crash reports found in the database. Engineering is safe... for now.</p>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</body>
+</html>
+{{end}}
