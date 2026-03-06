@@ -6,7 +6,7 @@ import (
 
 func (s *Store) GetReports(limit int) ([]*apex.CrashReport, error) {
 	query := `
-	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, EXTRACT(EPOCH FROM created_at)::BIGINT
+	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), EXTRACT(EPOCH FROM created_at)::BIGINT
 	FROM crash_reports 
 	ORDER BY created_at DESC 
 	LIMIT $1
@@ -30,6 +30,7 @@ func (s *Store) GetReports(limit int) ([]*apex.CrashReport, error) {
 			&r.Context.TotalMemory,
 			&r.Context.FreeMemory,
 			&r.Context.BatteryLevel,
+			&r.AiInsight,
 			&timestamp,
 		)
 		if err != nil {

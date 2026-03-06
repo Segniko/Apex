@@ -22,6 +22,7 @@ message CrashReport {
     string stack_trace = 3;
     int64 timestamp = 4;
     DeviceContext context = 5;
+    string ai_insight = 6;
 }
 
 // BatchReport allows us to squeeze multiple errors into one sync.

@@ -122,6 +122,7 @@ type CrashReport struct {
 	StackTrace    string                 `protobuf:"bytes,3,opt,name=stack_trace,json=stackTrace,proto3" json:"stack_trace,omitempty"`
 	Timestamp     int64                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Context       *DeviceContext         `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	AiInsight     string                 `protobuf:"bytes,6,opt,name=ai_insight,json=aiInsight,proto3" json:"ai_insight,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -191,6 +192,13 @@ func (x *CrashReport) GetContext() *DeviceContext {
 	return nil
 }
 
+func (x *CrashReport) GetAiInsight() string {
+	if x != nil {
+		return x.AiInsight
+	}
+	return ""
+}
+
 // BatchReport allows us to squeeze multiple errors into one sync.
 type BatchReport struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -250,14 +258,16 @@ const file_proto_apex_proto_rawDesc = "" +
 	"\rbattery_level\x18\x05 \x01(\x02R\fbatteryLevel\x12\x1f\n" +
 	"\vis_charging\x18\x06 \x01(\bR\n" +
 	"isCharging\x12!\n" +
-	"\fnetwork_type\x18\a \x01(\tR\vnetworkType\"\xb0\x01\n" +
+	"\fnetwork_type\x18\a \x01(\tR\vnetworkType\"\xcf\x01\n" +
 	"\vCrashReport\x12\x19\n" +
 	"\berror_id\x18\x01 \x01(\tR\aerrorId\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1f\n" +
 	"\vstack_trace\x18\x03 \x01(\tR\n" +
 	"stackTrace\x12\x1c\n" +
 	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\x12-\n" +
-	"\acontext\x18\x05 \x01(\v2\x13.apex.DeviceContextR\acontext\":\n" +
+	"\acontext\x18\x05 \x01(\v2\x13.apex.DeviceContextR\acontext\x12\x1d\n" +
+	"\n" +
+	"ai_insight\x18\x06 \x01(\tR\taiInsight\":\n" +
 	"\vBatchReport\x12+\n" +
 	"\areports\x18\x01 \x03(\v2\x11.apex.CrashReportR\areportsB\x1fZ\x1dgithub.com/apex/monitor/protob\x06proto3"
 

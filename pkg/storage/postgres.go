@@ -35,8 +35,10 @@ func (s *Store) Initialize() error {
 		total_memory BIGINT,
 		free_memory BIGINT,
 		battery_level FLOAT,
+		ai_insight TEXT,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
+	ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS ai_insight TEXT;
 	CREATE INDEX IF NOT EXISTS idx_reports_created_at ON crash_reports(created_at);
 	`
 	_, err := s.db.Exec(schema)
@@ -45,8 +47,8 @@ func (s *Store) Initialize() error {
 
 func (s *Store) SaveReport(r *apex.CrashReport) error {
 	query := `
-	INSERT INTO crash_reports (id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, created_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9))
+	INSERT INTO crash_reports (id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, ai_insight, created_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, to_timestamp($10))
 	`
 	_, err := s.db.Exec(query,
 		r.ErrorId,
@@ -56,7 +58,9 @@ func (s *Store) SaveReport(r *apex.CrashReport) error {
 		r.Context.Arch,
 		r.Context.TotalMemory,
 		r.Context.FreeMemory,
+		r.Context.FreeMemory,
 		r.Context.BatteryLevel,
+		r.AiInsight,
 		r.Timestamp,
 	)
 	return err

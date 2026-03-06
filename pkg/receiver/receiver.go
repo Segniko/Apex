@@ -2,6 +2,7 @@ package receiver
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -38,11 +39,40 @@ func (r *Receiver) Unpack(compressedData []byte) (*apex.BatchReport, error) {
 		return nil, err
 	}
 
-	// 2. Unmarshal Protobuf
+	// 2. Try Protobuf first
 	batch := &apex.BatchReport{}
-	if err := proto.Unmarshal(decompressed.Bytes(), batch); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal batch: %w", err)
+	if err := proto.Unmarshal(decompressed.Bytes(), batch); err == nil {
+		return batch, nil
+	}
+
+	// 3. Fallback to JSON for non-Go agents
+	if err := json.Unmarshal(decompressed.Bytes(), batch); err != nil {
+		return nil, fmt.Errorf("failed to decode batch (tried Proto and JSON): %w", err)
 	}
 
 	return batch, nil
+}
+
+// Analyze performs a tactical root-cause analysis of the crash.
+func (r *Receiver) Analyze(report *apex.CrashReport) string {
+	msg := report.Message
+	trace := report.StackTrace
+
+	// Pattern 1: Nil Pointer
+	if bytes.Contains([]byte(trace), []byte("nil pointer dereference")) {
+		return "CRITICAL: Nil pointer access detected. Check if the object is initialized before use. Potential fix: Add a nil-check guard."
+	}
+
+	// Pattern 2: Index Out of Range
+	if bytes.Contains([]byte(trace), []byte("index out of range")) {
+		return "DATA_BREACH: Array boundary violation. Verify slice length before indexing. Potential fix: Use 'len()' guard."
+	}
+
+	// Pattern 3: Database/Connection Issue
+	if bytes.Contains([]byte(msg), []byte("connection")) || bytes.Contains([]byte(msg), []byte("db")) {
+		return "INFRA_PULSE: Network/Database timeout. Check connection string or pool limits. Potential fix: Increase timeout or check DB health."
+	}
+
+	// Fallback
+	return "FORENSIC_SIG: Pattern unrecognized. Manual stack-trace audit required. Architecture seems stable otherwise."
 }

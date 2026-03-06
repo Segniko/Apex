@@ -34,7 +34,7 @@ func main() {
 	s, _ := syphon.New(net)
 
 	cfg := agent.DefaultConfig()
-	cfg.IngestURL = "http://localhost:8080/ingest"
+	cfg.IngestURL = "http://localhost:8081/ingest"
 	cfg.APIKey = "apex-prod-key-12345"
 	cfg.SyncInterval = 5 * time.Second
 
