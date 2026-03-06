@@ -4,10 +4,11 @@ import Link from 'next/link';
 
 export default function Docs() {
     const milestones = [
-        { date: "2026-03-06", title: "Project Inception", desc: "Started Apex Monitoring Engine for Go production environments." },
-        { date: "2026-03-06", title: "Dockerization Phase", desc: "Implemented containerization for PostgreSQL and Receiver." },
-        { date: "2026-03-06", title: "Reliability Layer", desc: "Added Retries, Backoff, and Health checks. Fixed DB Auth conflicts." },
-        { date: "2026-03-06", title: "Dashboard V2 (Next.js)", desc: "Upgraded from Go Templates to high-fidelity React dashboard." }
+        { date: "2026-03-06", title: "Project Inception", desc: "Core Go Engine with Zstd Protobuf DNA & encrypted Vault storage." },
+        { date: "2026-03-06", title: "Amber Industrial UI", desc: "Standardized dashboard theme (strictly zero blue/pink) and high-performance Recharts integration." },
+        { date: "2026-03-06", title: "Operational Suite", desc: "Prometheus/Grafana integration. Resolved port 8080 conflicts and routing issues." },
+        { date: "2026-03-06", title: "Intelligence Phase", desc: "AI Root-Cause Forensic panels and Tactical AI Chatbot. Created commercial pitch deck." },
+        { date: "2026-03-06", title: "Enterprise Scaling", desc: "Implemented Redis Ingest Buffer & CockroachDB global persistence. Developed Python Tactical Edge agent." }
     ];
 
     return (

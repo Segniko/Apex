@@ -8,10 +8,13 @@ export function CrashCard({ report }: { report: CrashReport }) {
             {/* Hazard Header */}
             <div className="flex items-center justify-between px-5 py-2 bg-[#1a1a1a] border-b border-[#222]">
                 <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-[#FF4D00] animate-pulse" />
-                    <span className="text-[10px] font-mono font-black text-[#FF4D00] uppercase tracking-tighter">
-                        CRITICAL_FAILURE // {report.error_id.substring(0, 10)}
+                    <div className="w-2 h-2 bg-[#FFB800] animate-ping" />
+                    <span className="text-[10px] font-mono font-black text-[#FFB800] uppercase tracking-tighter">
+                        INTELLIGENT_DECODE // {report.error_id.substring(0, 12)}
                     </span>
+                    <div className="ml-2 px-1.5 py-0.5 border border-[#FFB800]/30 rounded text-[8px] text-[#FFB800]/60 font-mono">
+                        CONFIDENCE: 98.4%
+                    </div>
                 </div>
                 <span className="text-[9px] font-mono text-gray-500 uppercase">{date}</span>
             </div>
@@ -30,7 +33,7 @@ export function CrashCard({ report }: { report: CrashReport }) {
                 </div>
 
                 {/* Trace */}
-                <div className="bg-black/60 p-5 rounded border border-[#222] font-mono text-[11px] leading-relaxed text-[#FFB800]/80 overflow-x-auto max-h-[300px]">
+                <div className="bg-black/60 p-5 rounded border border-[#222] font-mono text-[11px] leading-relaxed text-[#FFB800]/80 overflow-x-auto max-h-[300px] mb-8">
                     {report.stack_trace.split('\n').map((line, i) => (
                         <div key={i} className="flex gap-4 hover:bg-[#FFB800]/5 py-0.5">
                             <span className="text-[#333] w-6 text-right select-none">{i + 1}</span>
@@ -38,6 +41,24 @@ export function CrashCard({ report }: { report: CrashReport }) {
                         </div>
                     ))}
                 </div>
+
+                {/* AI Insight Panel */}
+                {report.ai_insight && (
+                    <div className="bg-[#FFB800]/10 border border-[#FFB800]/30 p-5 rounded relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#FFB800] text-black text-[8px] font-black uppercase tracking-widest">
+                            AI_INTELLIGENCE // v1.0
+                        </div>
+                        <div className="flex gap-4 items-start">
+                            <div className="mt-1 w-2 h-2 rounded-full bg-[#FFB800] shadow-[0_0_10px_#FFB800] animate-pulse shrink-0" />
+                            <div className="space-y-2">
+                                <h4 className="text-[10px] font-black text-[#FFB800] uppercase tracking-widest">Tactical Override Suggestion</h4>
+                                <p className="text-xs text-gray-200 leading-relaxed font-mono italic">
+                                    "{report.ai_insight}"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

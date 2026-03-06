@@ -12,9 +12,10 @@ export interface CrashReport {
     stack_trace: string;
     timestamp: number;
     context: DeviceContext;
+    ai_insight: string;
 }
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = "http://localhost:8081/api";
 
 export async function fetchReports(): Promise<CrashReport[]> {
     try {
