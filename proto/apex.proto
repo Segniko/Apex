@@ -17,15 +17,18 @@ message DeviceContext {
 
 // CrashReport is the "DNA" of the error.
 message CrashReport {
-    string error_id = 1;
-    string message = 2;
-    string stack_trace = 3;
-    int64 timestamp = 4;
-    DeviceContext context = 5;
-    string ai_insight = 6;
+  string error_id = 1;
+  string message = 2;
+  string stack_trace = 3;
+  int64 timestamp = 4;
+  map<string, string> context = 5;
+  string ai_insight = 6;
+  string org_id = 7;      // Multi-tenant identifier
+  string project_id = 8;  // Specific application identifier
 }
 
 // BatchReport allows us to squeeze multiple errors into one sync.
 message BatchReport {
-    repeated CrashReport reports = 1;
+  repeated CrashReport reports = 1;
+  string org_id = 2;      // Batch-level multi-tenant identifier
 }
