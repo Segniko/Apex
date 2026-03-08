@@ -274,7 +274,7 @@ func main() {
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
 		// Use port 5433 to avoid host conflicts with local Postgres
-		connStr = "postgres://postgres:postgres@localhost:5433/apex?sslmode=disable"
+		connStr = "postgres://postgres:postgres@127.0.0.1:5433/apex?sslmode=disable"
 	}
 
 	var store storage.Provider
@@ -304,7 +304,7 @@ func main() {
 	// Initialize Redis for Ingest Buffering
 	rdbAddr := os.Getenv("REDIS_URL")
 	if rdbAddr == "" {
-		rdbAddr = "localhost:6379"
+		rdbAddr = "127.0.0.1:6379"
 	}
 	rdb := redis.NewClient(&redis.Options{
 		Addr: rdbAddr,

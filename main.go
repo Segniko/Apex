@@ -44,15 +44,6 @@ func main() {
 	fmt.Println("=== Apex Production Agent Running ===")
 	fmt.Printf("Monitoring started. Crashes will sync every %v to %s\n", cfg.SyncInterval, cfg.IngestURL)
 
-	// Simulate periodic crashes to watch background sync
-	go func() {
-		for i := 0; i < 3; i++ {
-			time.Sleep(3 * time.Second)
-			fmt.Printf("Simulating crash %d...\n", i+1)
-			simulateCrash(a, fmt.Sprintf("Production simulation crash %d", i+1))
-		}
-	}()
-
 	// Wait for termination signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
