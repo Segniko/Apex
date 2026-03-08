@@ -1,0 +1,68 @@
+services:
+  cockroach:
+    image: cockroachdb/cockroach:v23.1.10
+    command: start-single-node --insecure
+    ports:
+      - "5433:26257" # Host 5433 maps to Cockroach DB port
+      - "8082:8080" # CockroachDB Dashboard
+    volumes:
+      - cockroach_data:/cockroach/cockroach-data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health?ready=1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+#  receiver:
+#    build: .
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/apex?sslmode=disable
+#      - APEX_API_KEY=apex-prod-key-12345
+#    depends_on:
+#      - postgres
+
+volumes:
+  cockroach_data:
+  prometheus_data:
+  grafana_data:
+  redis_data:
