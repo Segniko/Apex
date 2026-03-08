@@ -53,26 +53,61 @@ func (r *Receiver) Unpack(compressedData []byte) (*apex.BatchReport, error) {
 	return batch, nil
 }
 
+// AnalysisRule defines a heuristic for identifying root causes.
+type AnalysisRule struct {
+	Pattern     string
+	Description string
+	TacticalFix string
+}
+
+var forensicRules = []AnalysisRule{
+	{
+		Pattern:     "nil pointer dereference",
+		Description: "CRITICAL: Nil pointer access detected.",
+		TacticalFix: "Check if the object is initialized before use. Add a nil-check guard.",
+	},
+	{
+		Pattern:     "index out of range",
+		Description: "DATA_BREACH: Array boundary violation.",
+		TacticalFix: "Verify slice length before indexing. Use 'len()' guard.",
+	},
+	{
+		Pattern:     "context deadline exceeded",
+		Description: "INFRA_PULSE: Operation timed out.",
+		TacticalFix: "Check downstream service health or increase context timeout values.",
+	},
+	{
+		Pattern:     "invalid memory address",
+		Description: "MEMORY_FAULT: Unsafe memory operation.",
+		TacticalFix: "Audit pointer arithmetic and slice capacity allocations.",
+	},
+	{
+		Pattern:     "no such file or directory",
+		Description: "IO_FAILURE: Resource missing.",
+		TacticalFix: "Verify path existence and permissions in the target environment.",
+	},
+	{
+		Pattern:     "json: cannot unmarshal",
+		Description: "DNA_CORRUPTION: Data structure mismatch.",
+		TacticalFix: "Sync Protobuf/JSON schema definitions between agent and receiver.",
+	},
+}
+
 // Analyze performs a tactical root-cause analysis of the crash.
 func (r *Receiver) Analyze(report *apex.CrashReport) string {
-	msg := report.Message
-	trace := report.StackTrace
+	content := fmt.Sprintf("%s %s", report.Message, report.StackTrace)
+	contentBytes := []byte(content)
 
-	// Pattern 1: Nil Pointer
-	if bytes.Contains([]byte(trace), []byte("nil pointer dereference")) {
-		return "CRITICAL: Nil pointer access detected. Check if the object is initialized before use. Potential fix: Add a nil-check guard."
+	for _, rule := range forensicRules {
+		if bytes.Contains(contentBytes, []byte(rule.Pattern)) {
+			return fmt.Sprintf("%s // TACTICAL_FIX: %s", rule.Description, rule.TacticalFix)
+		}
 	}
 
-	// Pattern 2: Index Out of Range
-	if bytes.Contains([]byte(trace), []byte("index out of range")) {
-		return "DATA_BREACH: Array boundary violation. Verify slice length before indexing. Potential fix: Use 'len()' guard."
+	// Dynamic fallback for database issues
+	if bytes.Contains(contentBytes, []byte("connection")) || bytes.Contains(contentBytes, []byte("db")) {
+		return "INFRA_PULSE: Network/Database connection failure. Check connection strings or pool health."
 	}
 
-	// Pattern 3: Database/Connection Issue
-	if bytes.Contains([]byte(msg), []byte("connection")) || bytes.Contains([]byte(msg), []byte("db")) {
-		return "INFRA_PULSE: Network/Database timeout. Check connection string or pool limits. Potential fix: Increase timeout or check DB health."
-	}
-
-	// Fallback
-	return "FORENSIC_SIG: Pattern unrecognized. Manual stack-trace audit required. Architecture seems stable otherwise."
+	return "FORENSIC_SIG: Pattern unrecognized. Manual stack-trace audit required. Architecture seems stable."
 }

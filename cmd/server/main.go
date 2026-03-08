@@ -9,9 +9,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
+	tacticalai "github.com/apex/monitor/pkg/ai"
 	"github.com/apex/monitor/pkg/receiver"
 	"github.com/apex/monitor/pkg/storage"
 	apex "github.com/apex/monitor/proto"
@@ -42,6 +42,7 @@ type Server struct {
 	recv  *receiver.Receiver
 	store storage.Provider
 	rdb   *redis.Client
+	ai    *tacticalai.TacticalAI
 }
 
 func NewServer(store storage.Provider, rdb *redis.Client) *Server {
@@ -50,6 +51,7 @@ func NewServer(store storage.Provider, rdb *redis.Client) *Server {
 		recv:  recv,
 		store: store,
 		rdb:   rdb,
+		ai:    tacticalai.NewTacticalAI(),
 	}
 
 	// Start 5 workers to handle database ingestion concurrently from Redis
@@ -233,32 +235,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := strings.ToLower(req.Message)
-	var response string
-
-	// Tactical Logic: Context-Aware Response Matrix
-	switch {
-	case strings.Contains(msg, "hi") || strings.Contains(msg, "hello"):
-		response = "APEX_AI unit online. Ready for tactical forensics. I am monitoring the CockroachDB clusters and Redis ingest streams. How can I assist your audit?"
-	case strings.Contains(msg, "status") || strings.Contains(msg, "deployment"):
-		response = "Telemetry indicates the current deployment is under heavy monitoring. Ingest buffer velocity is steady. No anomalies detected in the last 300ms. All services are tactical."
-	case strings.Contains(msg, "nil") || strings.Contains(msg, "pointer") || strings.Contains(msg, "null"):
-		response = "NIL_POINTER_ANALYSIS: This is a common failure in unsafe memory operations. I recommend a tactical audit of your reference guards. Check the stack trace for the 'dereference' instruction."
-	case strings.Contains(msg, "database") || strings.Contains(msg, "sql") || strings.Contains(msg, "cockroach"):
-		response = "DATABASE_INTEGRITY: CockroachDB clusters are reporting 99.99% consistency. If you see 'Scan Errors', ensure your COALESCE logic is applied to legacy schema fields."
-	case strings.Contains(msg, "error") || strings.Contains(msg, "fault") || strings.Contains(msg, "crash"):
-		response = "CRASH_FORENSICS: I have indexed the recent failure batches. Which specific 'INTELLIGENT_DECODE' ID should I perform a deep-trace on?"
-	case req.ReportID != "" || strings.Contains(msg, "decode"):
-		response = "DECODING_TRACE: Analyzing packet structure for high-fidelity reconstruction. Initial findings suggest an operational bottleneck in the ingest-to-vault pipeline."
-	default:
-		responses := []string{
-			"Processing inquiry... Tactical analysis suggests we remain vigilant on the current telemetry stream.",
-			"Data inconclusive for a deep-dive. Provide a specific Error ID for forensic reconstruction.",
-			"I am monitoring the tactical nodes. Telemetry is flowing smoothly through the Redis buffer.",
-			"Inquiry logged. Proceed with caution on the recent deployment patches.",
-		}
-		response = responses[time.Now().UnixNano()%int64(len(responses))]
-	}
+	response := s.ai.Chat(req.Message, req.ReportID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
