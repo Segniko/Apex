@@ -1,6 +1,7 @@
 'use client';
 
 import { CrashCard } from '@/components/CrashCard';
+import { UserButton } from '@/components/UserButton';
 import { CrashReport, fetchReports } from '@/lib/api';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -43,9 +44,12 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <StatBox label="Total Failures" value={reports.length.toString()} color="#FFB800" />
-                        <StatBox label="Active Nodes" value="01 / 12" color="#888" />
+                    <div className="flex flex-col items-end gap-6">
+                        <UserButton />
+                        <div className="grid grid-cols-2 gap-4">
+                            <StatBox label="Total Failures" value={reports.length.toString()} color="#FFB800" />
+                            <StatBox label="Active Nodes" value="01 / 12" color="#888" />
+                        </div>
                     </div>
                 </header>
 

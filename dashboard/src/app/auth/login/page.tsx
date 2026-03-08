@@ -27,9 +27,6 @@ export default function Login() {
                         </button>
                     </form>
 
-                    <button disabled className="w-full border border-[#222] bg-[#0a0a0a] p-4 flex items-center justify-center gap-3 opacity-50 cursor-not-allowed">
-                        <span className="font-mono text-xs uppercase text-gray-600">SSO / SAML (Enterprise Only)</span>
-                    </button>
                 </div>
 
                 <div className="mt-8 text-center border-t border-[#222] pt-6">

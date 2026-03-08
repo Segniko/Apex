@@ -12,6 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import { Providers } from "../components/Providers";
 import { TacticalChat } from "../components/TacticalChat";
 
 export const metadata: Metadata = {
@@ -29,8 +30,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <TacticalChat />
+        <Providers>
+          {children}
+          <TacticalChat />
+        </Providers>
       </body>
     </html>
   );

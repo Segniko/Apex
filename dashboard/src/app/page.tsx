@@ -191,7 +191,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           <h2 className="text-2xl font-black italic uppercase tracking-tighter">APEX <span className="text-[#FFB800]">SYSTEMS</span></h2>
           <div className="flex gap-12 text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-            <Link href="/dashboard" className="hover:text-[#FFB800]">Dashboard</Link>
+            <Link href="/auth/login" className="hover:text-[#FFB800]">Dashboard</Link>
             <Link href="/docs" className="hover:text-[#FFB800]">Mission Log</Link>
             <span className="text-gray-800">Operational Log: 11-03-2026</span>
           </div>

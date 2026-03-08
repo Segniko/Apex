@@ -1,3 +1,4 @@
+import { UserButton } from '@/components/UserButton';
 import Link from 'next/link';
 
 export default function ProjectsHub() {
@@ -9,12 +10,7 @@ export default function ProjectsHub() {
                     <div className="w-2 h-2 bg-[#FFB800] animate-pulse rounded-full" />
                     <span className="font-black italic tracking-tighter uppercase text-xl">APEX <span className="text-[#FFB800]">Command</span></span>
                 </div>
-                <div className="flex items-center gap-6">
-                    <span className="text-xs font-mono text-gray-500 uppercase tracking-widest hidden md:inline">ID: u_8291x</span>
-                    <div className="w-8 h-8 bg-[#222] rounded-full overflow-hidden flex items-center justify-center border border-[#333] hover:border-[#FFB800] transition-colors cursor-pointer">
-                        <span className="text-[10px] font-mono text-gray-400">GH</span>
-                    </div>
-                </div>
+                <UserButton />
             </header>
 
             <main className="max-w-5xl mx-auto px-6 py-20">
