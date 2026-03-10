@@ -7,13 +7,15 @@ import (
 )
 
 type MemoryStore struct {
-	mu      sync.RWMutex
-	reports []*apex.CrashReport
+	mu       sync.RWMutex
+	reports  []*apex.CrashReport
+	projects []*Project
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		reports: make([]*apex.CrashReport, 0),
+		reports:  make([]*apex.CrashReport, 0),
+		projects: make([]*Project, 0),
 	}
 }
 
@@ -44,4 +46,29 @@ func (m *MemoryStore) GetReports(limit int) ([]*apex.CrashReport, error) {
 	}
 
 	return results, nil
+}
+
+func (m *MemoryStore) SaveProject(p *Project) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.projects = append(m.projects, p)
+	return nil
+}
+
+func (m *MemoryStore) GetProjects(userID string) ([]*Project, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	var userProjects []*Project
+	for _, p := range m.projects {
+		if p.UserID == userID || userID == "anonymous" {
+			userProjects = append(userProjects, p)
+		}
+	}
+	return userProjects, nil
+}
+
+func (m *MemoryStore) ValidateKey(key string) (bool, error) {
+	// In memory mode, accept everything for now to avoid blocking ingest
+	return true, nil
 }

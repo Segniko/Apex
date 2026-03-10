@@ -15,6 +15,7 @@ import (
 	"github.com/apex/monitor/pkg/receiver"
 	"github.com/apex/monitor/pkg/storage"
 	apex "github.com/apex/monitor/proto"
+	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -39,19 +40,21 @@ var (
 )
 
 type Server struct {
-	recv  *receiver.Receiver
-	store storage.Provider
-	rdb   *redis.Client
-	ai    *tacticalai.TacticalAI
+	store        storage.Provider
+	rdb          *redis.Client
+	recv         *receiver.Receiver
+	ai           *tacticalai.TacticalAI
+	isPersistent bool
 }
 
 func NewServer(store storage.Provider, rdb *redis.Client) *Server {
 	recv, _ := receiver.New()
 	s := &Server{
-		recv:  recv,
-		store: store,
-		rdb:   rdb,
-		ai:    tacticalai.NewTacticalAI(),
+		store:        store,
+		rdb:          rdb,
+		recv:         recv,
+		ai:           tacticalai.NewTacticalAI(),
+		isPersistent: false, // Will be set in main
 	}
 
 	// Start 5 workers to handle database ingestion concurrently from Redis
@@ -119,20 +122,33 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	timer := prometheus.NewTimer(ingestDuration)
 	defer timer.ObserveDuration()
 
-	// Simple API Key check
-	apiKey := r.Header.Get("X-Apex-API-Key")
-	if apiKey != os.Getenv("APEX_API_KEY") && os.Getenv("APEX_API_KEY") != "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	// Validate Ingest Key (API Key)
+	key := r.Header.Get("X-Apex-API-Key")
+	if key == "" {
+		http.Error(w, "Unauthorized: Missing X-Apex-API-Key", http.StatusUnauthorized)
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	valid, err := s.store.ValidateKey(key)
+	if err != nil {
+		slog.Error("Failed to validate ingest key", "error", err)
+	}
+	if !valid {
+		// Fallback for demo: accept default key if env is set, but warn
+		defaultKey := os.Getenv("APEX_API_KEY")
+		if defaultKey == "" || key != defaultKey {
+			http.Error(w, "Unauthorized: Invalid Ingest Key", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	compressed, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Read error", http.StatusInternalServerError)
 		return
 	}
 
-	batch, err := s.recv.Unpack(body)
+	batch, err := s.recv.Unpack(compressed)
 	if err != nil {
 		slog.Error("Failed to unpack batch", "error", err)
 		ingestErrors.Inc()
@@ -243,6 +259,93 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"response": response})
 }
 
+func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		UserID string `json:"user_id"`
+		Name   string `json:"name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Generate a secure Ingest Key
+	ingestKey := "apex_" + uuid.New().String()
+	if req.UserID == "" {
+		req.UserID = "anonymous"
+	}
+
+	p := &storage.Project{
+		ID:        uuid.New().String(),
+		UserID:    req.UserID,
+		Name:      req.Name,
+		IngestKey: ingestKey,
+		CreatedAt: time.Now(),
+	}
+
+	slog.Info("Attempting to save project", "id", p.ID, "name", p.Name, "userId", p.UserID)
+
+	if err := s.store.SaveProject(p); err != nil {
+		slog.Error("Failed to save project", "error", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
+func (s *Server) handleGetProjects(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		userID = "anonymous"
+	}
+
+	projects, err := s.store.GetProjects(userID)
+	if err != nil {
+		slog.Error("Failed to fetch projects", "error", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(projects)
+}
+
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"persistent": s.isPersistent,
+		"status":     "operational",
+		"timestamp":  time.Now().Unix(),
+	})
+}
+
 func main() {
 	// Initialize structured logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -250,8 +353,8 @@ func main() {
 
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
-		// Use port 5433 to avoid host conflicts with local Postgres
-		connStr = "postgres://postgres:postgres@127.0.0.1:5433/apex?sslmode=disable"
+		// CockroachDB default insecure connection
+		connStr = "postgresql://root@127.0.0.1:5433/defaultdb?sslmode=disable"
 	}
 
 	var store storage.Provider
@@ -289,11 +392,17 @@ func main() {
 	slog.Info("Redis connection initialized", "addr", rdbAddr)
 
 	srv := NewServer(store, rdb)
+	if _, ok := store.(*storage.Store); ok {
+		srv.isPersistent = true
+	}
 
 	http.HandleFunc("/ingest", srv.handleIngest)
 	http.HandleFunc("/reports", srv.handleGetReports)
 	http.HandleFunc("/api/reports", srv.handleGetReportsJSON)
 	http.HandleFunc("/api/chat", srv.handleChat)
+	http.HandleFunc("/api/projects", srv.handleGetProjects)
+	http.HandleFunc("/api/projects/create", srv.handleCreateProject)
+	http.HandleFunc("/api/status", srv.handleStatus)
 	http.Handle("/metrics", promhttp.Handler())
 
 	port := os.Getenv("PORT")

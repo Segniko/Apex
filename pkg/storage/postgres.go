@@ -38,8 +38,17 @@ func (s *Store) Initialize() error {
 		ai_insight TEXT,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
-	ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS ai_insight TEXT;
+
+	CREATE TABLE IF NOT EXISTS projects (
+		id UUID PRIMARY KEY,
+		user_id TEXT,
+		name TEXT,
+		ingest_key TEXT UNIQUE,
+		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_reports_created_at ON crash_reports(created_at);
+	CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 	`
 	_, err := s.db.Exec(schema)
 	return err
@@ -63,6 +72,15 @@ func (s *Store) SaveReport(r *apex.CrashReport) error {
 		r.AiInsight,
 		r.Timestamp,
 	)
+	return err
+}
+
+func (s *Store) SaveProject(p *Project) error {
+	query := `
+	INSERT INTO projects (id, user_id, name, ingest_key)
+	VALUES ($1, $2, $3, $4)
+	`
+	_, err := s.db.Exec(query, p.ID, p.UserID, p.Name, p.IngestKey)
 	return err
 }
 
