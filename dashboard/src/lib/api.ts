@@ -25,9 +25,12 @@ export interface Project {
 
 const API_BASE = "http://localhost:8081/api";
 
-export async function fetchReports(): Promise<CrashReport[]> {
+export async function fetchReports(projectId?: string): Promise<CrashReport[]> {
     try {
-        const res = await fetch(`${API_BASE}/reports`, { cache: 'no-store' });
+        const url = projectId 
+            ? `${API_BASE}/reports?project_id=${projectId}` 
+            : `${API_BASE}/reports`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error("Failed to fetch reports");
         const data = await res.json();
         return data || [];

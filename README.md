@@ -57,6 +57,19 @@ except Exception as e:
     agent.sync(e) # Captured. Decoded. Synced.
 ```
 
+### Node.js Integration
+```javascript
+const { ApexAgent } = require('./agents/node/agent');
+
+const agent = new ApexAgent("https://apex.vercel.app/api/ingest", "YOUR_API_KEY");
+
+try {
+    // Your logic...
+} catch (error) {
+    agent.captureException(error); // Captured. Compressed. Synced.
+}
+```
+
 ## The "Uncrashable" Architecture
 - **Ingest Buffer (Redis Streams)**: Handles 100k+ reports/sec. Signal is never lost, even if the DB is under load.
 - **Global Persistence (CockroachDB)**: Distributed by design. Sharded logs across your entire global cluster.

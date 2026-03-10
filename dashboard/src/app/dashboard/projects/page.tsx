@@ -91,7 +91,7 @@ export default function ProjectsHub() {
                                                 <h3 className="text-3xl font-black italic tracking-tighter uppercase text-white mb-2">{p.name}</h3>
                                                 <span className="text-[10px] font-mono text-[#FFB800] bg-[#FFB800]/10 px-3 py-1 uppercase tracking-widest border border-[#FFB800]/20">Receiving Signal</span>
                                             </div>
-                                            <Link href="/dashboard" className="border border-[#FFB800] text-[#FFB800] px-8 py-3 text-xs font-black uppercase tracking-widest hover:bg-[#FFB800] hover:text-black transition-all shadow-[0_0_15px_rgba(255,184,0,0.1)] w-full sm:w-auto text-center">
+                                            <Link href={`/dashboard/projects/${p.id}`} className="border border-[#FFB800] text-[#FFB800] px-8 py-3 text-xs font-black uppercase tracking-widest hover:bg-[#FFB800] hover:text-black transition-all shadow-[0_0_15px_rgba(255,184,0,0.1)] w-full sm:w-auto text-center">
                                                 Open HUD
                                             </Link>
                                         </div>

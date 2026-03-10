@@ -7,45 +7,51 @@ import (
 )
 
 type MemoryStore struct {
-	mu       sync.RWMutex
-	reports  []*apex.CrashReport
-	projects []*Project
+	mu            sync.RWMutex
+	reports       []*apex.CrashReport
+	reportProject map[string]string // reportID -> projectID
+	projects      []*Project
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		reports:  make([]*apex.CrashReport, 0),
-		projects: make([]*Project, 0),
+		reports:       make([]*apex.CrashReport, 0),
+		reportProject: make(map[string]string),
+		projects:      make([]*Project, 0),
 	}
 }
 
-func (m *MemoryStore) SaveReport(r *apex.CrashReport) error {
+func (m *MemoryStore) SaveReport(r *apex.CrashReport, projectID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	// Keep last 100 reports in memory
 	if len(m.reports) >= 100 {
+		old := m.reports[0]
 		m.reports = m.reports[1:]
+		delete(m.reportProject, old.ErrorId)
 	}
 	m.reports = append(m.reports, r)
+	m.reportProject[r.ErrorId] = projectID
 	return nil
 }
 
-func (m *MemoryStore) GetReports(limit int) ([]*apex.CrashReport, error) {
+func (m *MemoryStore) GetReports(limit int, projectID string) ([]*apex.CrashReport, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	count := len(m.reports)
-	if count > limit {
-		count = limit
+	// Filter in memory
+	var filtered []*apex.CrashReport
+	for i := len(m.reports) - 1; i >= 0; i-- {
+		r := m.reports[i]
+		if projectID == "" || m.reportProject[r.ErrorId] == projectID {
+			filtered = append(filtered, r)
+		}
+		if len(filtered) >= limit {
+			break
+		}
 	}
 
-	// Return in reverse order (newest first)
-	results := make([]*apex.CrashReport, 0, count)
-	for i := len(m.reports) - 1; i >= len(m.reports)-count; i-- {
-		results = append(results, m.reports[i])
-	}
-
-	return results, nil
+	return filtered, nil
 }
 
 func (m *MemoryStore) SaveProject(p *Project) error {
@@ -68,7 +74,14 @@ func (m *MemoryStore) GetProjects(userID string) ([]*Project, error) {
 	return userProjects, nil
 }
 
-func (m *MemoryStore) ValidateKey(key string) (bool, error) {
-	// In memory mode, accept everything for now to avoid blocking ingest
-	return true, nil
+func (m *MemoryStore) ValidateKey(key string) (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, p := range m.projects {
+		if p.IngestKey == key {
+			return p.ID, nil
+		}
+	}
+	// Fallback for demo
+	return "00000000-0000-0000-0000-000000000000", nil
 }

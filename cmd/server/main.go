@@ -96,7 +96,9 @@ func (s *Server) worker(id int) {
 				insight := s.recv.Analyze(report)
 				report.AiInsight = insight
 
-				err := s.store.SaveReport(report)
+				projectID := message.Values["project_id"].(string)
+
+				err := s.store.SaveReport(report, projectID)
 				if err != nil {
 					slog.Error("Failed to save report", "worker_id", id, "error", err)
 				} else {
@@ -129,17 +131,18 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valid, err := s.store.ValidateKey(key)
+	projectID, err := s.store.ValidateKey(key)
 	if err != nil {
 		slog.Error("Failed to validate ingest key", "error", err)
 	}
-	if !valid {
+	if projectID == "" {
 		// Fallback for demo: accept default key if env is set, but warn
 		defaultKey := os.Getenv("APEX_API_KEY")
 		if defaultKey == "" || key != defaultKey {
 			http.Error(w, "Unauthorized: Invalid Ingest Key", http.StatusUnauthorized)
 			return
 		}
+		projectID = "00000000-0000-0000-0000-000000000000" // Default Demo Project
 	}
 
 	compressed, err := io.ReadAll(r.Body)
@@ -164,7 +167,10 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		data, _ := proto.Marshal(report)
 		err := s.rdb.XAdd(ctx, &redis.XAddArgs{
 			Stream: "apex_reports",
-			Values: map[string]interface{}{"data": string(data)},
+			Values: map[string]interface{}{
+				"data":       string(data),
+				"project_id": projectID,
+			},
 		}).Err()
 		if err != nil {
 			slog.Error("Failed to push to Redis", "error", err)
@@ -181,7 +187,8 @@ func (s *Server) handleGetReports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reports, err := s.store.GetReports(50)
+	projectID := r.URL.Query().Get("project_id")
+	reports, err := s.store.GetReports(50, projectID)
 	if err != nil {
 		slog.Error("Failed to fetch reports", "error", err)
 	}
@@ -195,7 +202,8 @@ func (s *Server) handleGetReportsJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reports, err := s.store.GetReports(50)
+	projectID := r.URL.Query().Get("project_id")
+	reports, err := s.store.GetReports(50, projectID)
 	if err != nil {
 		slog.Error("Failed to fetch reports", "error", err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -392,7 +400,7 @@ func main() {
 	slog.Info("Redis connection initialized", "addr", rdbAddr)
 
 	srv := NewServer(store, rdb)
-	if _, ok := store.(*storage.Store); ok {
+	if store != nil {
 		srv.isPersistent = true
 	}
 

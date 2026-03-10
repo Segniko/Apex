@@ -1,0 +1,13 @@
+{
+  "name": "apex-node-agent",
+  "version": "1.0.0",
+  "description": "Tactical Node.js integration for Apex Monitoring",
+  "main": "agent.js",
+  "dependencies": {
+    "uuid": "^9.0.0",
+    "fzstd": "^0.1.0"
+  },
+  "scripts": {
+    "test": "node agent.js"
+  }
+}

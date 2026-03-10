@@ -1,17 +1,20 @@
 package storage
 
 import (
+	"database/sql"
+
 	apex "github.com/apex/monitor/proto"
 )
 
-func (s *Store) GetReports(limit int) ([]*apex.CrashReport, error) {
+func (s *Store) GetReports(limit int, projectID string) ([]*apex.CrashReport, error) {
 	query := `
 	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), EXTRACT(EPOCH FROM created_at)::BIGINT
 	FROM crash_reports 
+	WHERE (project_id = $2 OR $2 = '')
 	ORDER BY created_at DESC 
 	LIMIT $1
 	`
-	rows, err := s.db.Query(query, limit)
+	rows, err := s.db.Query(query, limit, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,9 +70,12 @@ func (s *Store) GetProjects(userID string) ([]*Project, error) {
 	return projects, nil
 }
 
-func (s *Store) ValidateKey(key string) (bool, error) {
-	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM projects WHERE ingest_key = $1)"
-	err := s.db.QueryRow(query, key).Scan(&exists)
-	return exists, err
+func (s *Store) ValidateKey(key string) (string, error) {
+	var projectID string
+	query := "SELECT id FROM projects WHERE ingest_key = $1"
+	err := s.db.QueryRow(query, key).Scan(&projectID)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return projectID, err
 }

@@ -28,6 +28,7 @@ func (s *Store) Initialize() error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS crash_reports (
 		id UUID PRIMARY KEY,
+		project_id UUID,
 		message TEXT,
 		stack_trace TEXT,
 		os TEXT,
@@ -49,24 +50,25 @@ func (s *Store) Initialize() error {
 
 	CREATE INDEX IF NOT EXISTS idx_reports_created_at ON crash_reports(created_at);
 	CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+	CREATE INDEX IF NOT EXISTS idx_reports_project_id ON crash_reports(project_id);
 	`
 	_, err := s.db.Exec(schema)
 	return err
 }
 
-func (s *Store) SaveReport(r *apex.CrashReport) error {
+func (s *Store) SaveReport(r *apex.CrashReport, projectID string) error {
 	query := `
-	INSERT INTO crash_reports (id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, ai_insight, created_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, to_timestamp($10))
+	INSERT INTO crash_reports (id, project_id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, ai_insight, created_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, to_timestamp($11))
 	`
 	_, err := s.db.Exec(query,
 		r.ErrorId,
+		projectID,
 		r.Message,
 		r.StackTrace,
 		r.Context.Os,
 		r.Context.Arch,
 		r.Context.TotalMemory,
-		r.Context.FreeMemory,
 		r.Context.FreeMemory,
 		r.Context.BatteryLevel,
 		r.AiInsight,

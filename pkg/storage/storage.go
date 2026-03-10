@@ -17,10 +17,10 @@ type Project struct {
 
 // Provider is the interface for all storage implementations.
 type Provider interface {
-	SaveReport(r *apex.CrashReport) error
-	GetReports(limit int) ([]*apex.CrashReport, error)
+	SaveReport(r *apex.CrashReport, projectID string) error
+	GetReports(limit int, projectID string) ([]*apex.CrashReport, error)
 
 	SaveProject(p *Project) error
 	GetProjects(userID string) ([]*Project, error)
-	ValidateKey(key string) (bool, error)
+	ValidateKey(key string) (string, error)
 }
