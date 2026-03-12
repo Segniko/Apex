@@ -52,9 +52,9 @@ export function CrashCard({ report }: { report: CrashReport }) {
                             <div className="mt-1 w-2 h-2 rounded-full bg-[#FFB800] shadow-[0_0_10px_#FFB800] animate-pulse shrink-0" />
                             <div className="space-y-2">
                                 <h4 className="text-[10px] font-black text-[#FFB800] uppercase tracking-widest">Tactical Override Suggestion</h4>
-                                <p className="text-xs text-gray-200 leading-relaxed font-mono italic">
-                                    "{report.ai_insight}"
-                                </p>
+                                <div className="text-xs text-gray-200 leading-relaxed font-mono whitespace-pre-wrap italic">
+                                    {report.ai_insight}
+                                </div>
                             </div>
                         </div>
                     </div>

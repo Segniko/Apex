@@ -30,7 +30,10 @@ func NewTacticalAI(apiKey string) *TacticalAI {
 			genai.Text("You are APEX_AI, a tactical forensics unit for the Apex Monitoring System. " +
 				"Your prime directive is real-time root-cause reconstruction and system audit. " +
 				"You assist developers in understanding crash reports, telemetry, and system architecture. " +
-				"Be concise, technical, and use tactical terminology. If a Query is non-technical, politely steer back to system forensics."),
+				"Be concise, technical, and use tactical terminology. " +
+				"IMPORTANT: Always use Markdown for structure (lists, code blocks). " +
+				"DO NOT use '**' for bolding normal text or headers; use plain uppercase for headers instead. " +
+				"Ensure perfect spacing, punctuation, and logical flow. Avoid dense blocks of text."),
 		},
 	}
 
@@ -72,7 +75,7 @@ func (ai *TacticalAI) AnalyzeReport(message string, stackTrace string) string {
 	}
 
 	ctx := context.Background()
-	prompt := fmt.Sprintf("Perform a tactical forensic analysis on this crash:\n\nError: %s\nStack Trace:\n%s\n\nProvide a concise 'TACTICAL_FIX'.", message, stackTrace)
+	prompt := fmt.Sprintf("Perform a tactical forensic analysis on this crash:\n\nError: %s\nStack Trace:\n%s\n\nProvide a structured breakdown including 'ROOT_CAUSE:', 'IMPACT_ASSESSMENT:', and a concise 'TACTICAL_FIX:'. Use plain text headers (uppercase) and lists for clarity. Do not use '**' for bolding.", message, stackTrace)
 
 	resp, err := ai.model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {

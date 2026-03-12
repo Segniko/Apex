@@ -65,7 +65,9 @@ export function TacticalChat() {
                                     <span className="opacity-40 block mb-1 uppercase font-black tracking-tighter text-[8px]">
                                         {m.role === 'ai' ? 'APEX_DECODE' : 'OPERATOR'}
                                     </span>
-                                    {m.text}
+                                    <div className="whitespace-pre-wrap">
+                                        {m.text}
+                                    </div>
                                 </div>
                             </div>
                         ))}
