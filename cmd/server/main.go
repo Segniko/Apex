@@ -64,10 +64,8 @@ func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Ser
 		isPersistent: false, // Will be set in main
 	}
 
-	// Start 5 workers to handle database ingestion concurrently from Redis
-	for i := 0; i < 5; i++ {
-		go s.worker(i)
-	}
+	// Start 1 worker to handle database ingestion from Redis
+	go s.worker(0)
 
 	return s
 }
@@ -75,12 +73,13 @@ func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Ser
 func (s *Server) worker(id int) {
 	ctx := context.Background()
 	streamName := "apex_reports"
+	lastID := "0" // Start from the beginning of the stream to catch any backlog
 
 	for {
 		// Block-read from the Redis Stream
 		streams, err := s.rdb.XRead(ctx, &redis.XReadArgs{
-			Streams: []string{streamName, "$"}, // "$" means only new messages
-			Block:   0,                         // Wait indefinitely
+			Streams: []string{streamName, lastID},
+			Block:   0, // Wait indefinitely
 			Count:   1,
 		}).Result()
 
@@ -92,9 +91,32 @@ func (s *Server) worker(id int) {
 
 		for _, stream := range streams {
 			for _, message := range stream.Messages {
-				data := message.Values["data"].(string)
+				lastID = message.ID // Track progress
+
+				dataVal, ok := message.Values["data"]
+				if !ok {
+					slog.Warn("Message missing data field, skipping", "msg_id", message.ID)
+					continue
+				}
+				dataStr, ok := dataVal.(string)
+				if !ok {
+					slog.Warn("Message data is not a string, skipping", "msg_id", message.ID)
+					continue
+				}
+
+				projectIDVal, ok := message.Values["project_id"]
+				if !ok {
+					slog.Warn("Message missing project_id field, skipping", "msg_id", message.ID)
+					continue
+				}
+				projectID, ok := projectIDVal.(string)
+				if !ok {
+					slog.Warn("Message project_id is not a string, skipping", "msg_id", message.ID)
+					continue
+				}
+
 				report := &apex.CrashReport{}
-				if err := proto.Unmarshal([]byte(data), report); err != nil {
+				if err := proto.Unmarshal([]byte(dataStr), report); err != nil {
 					slog.Error("Failed to unmarshal from Redis", "worker_id", id, "error", err)
 					continue
 				}
@@ -109,7 +131,6 @@ func (s *Server) worker(id int) {
 					report.AiInsight = insight
 				} else {
 					// Apply Rate Limit: 20 insights per hour per project
-					projectID := message.Values["project_id"].(string)
 					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 20, 1*time.Hour)
 
 					if !allowed {
@@ -125,13 +146,11 @@ func (s *Server) worker(id int) {
 					report.AiInsight = insight
 				}
 
-				projectID := message.Values["project_id"].(string)
-
 				err = s.store.SaveReport(report, projectID)
 				if err != nil {
-					slog.Error("Failed to save report", "worker_id", id, "error", err)
+					slog.Error("Failed to save report", "worker_id", id, "error", err, "project_id", projectID)
 				} else {
-					slog.Info("Report processed from Redis", "worker_id", id, "crash_id", report.ErrorId)
+					slog.Info("Report processed from Redis", "worker_id", id, "crash_id", report.ErrorId, "project_id", projectID)
 				}
 			}
 		}

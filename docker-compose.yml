@@ -46,7 +46,7 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://root@cockroach:26257/defaultdb?sslmode=disable
-      - NEXT_PUBLIC_API_URL=http://receiver:8081
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_GITHUB_ID=${AUTH_GITHUB_ID}
       - AUTH_GITHUB_SECRET=${AUTH_GITHUB_SECRET}

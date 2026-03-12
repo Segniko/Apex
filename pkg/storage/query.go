@@ -10,7 +10,7 @@ func (s *Store) GetReports(limit int, projectID string) ([]*apex.CrashReport, er
 	query := `
 	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), EXTRACT(EPOCH FROM created_at)::BIGINT
 	FROM crash_reports 
-	WHERE (project_id = $2 OR $2 = '')
+	WHERE ($2 = '' OR project_id::text = $2)
 	ORDER BY created_at DESC 
 	LIMIT $1
 	`
