@@ -24,7 +24,7 @@ func NewTacticalAI(apiKey string) *TacticalAI {
 		return nil
 	}
 
-	model := client.GenerativeModel("gemini-1.5-flash-latest")
+	model := client.GenerativeModel("gemini-3-flash-preview")
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{
 			genai.Text("You are APEX_AI, a tactical forensics unit for the Apex Monitoring System. " +

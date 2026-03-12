@@ -233,8 +233,6 @@ func (s *Server) handleGetReportsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	// Allow CORS for the dashboard
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	json.NewEncoder(w).Encode(reports)
 }
 
@@ -257,15 +255,6 @@ func renderDashboard(w http.ResponseWriter, reports []*apex.CrashReport) {
 }
 
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -284,21 +273,10 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	response := s.ai.Chat(req.Message, req.ReportID)
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	json.NewEncoder(w).Encode(map[string]string{"response": response})
 }
 
 func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -341,12 +319,8 @@ func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetProjects(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -367,7 +341,6 @@ func (s *Server) handleGetProjects(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"persistent": s.isPersistent,
@@ -434,13 +407,14 @@ func main() {
 		srv.isPersistent = true
 	}
 
-	http.HandleFunc("/ingest", srv.handleIngest)
-	http.HandleFunc("/reports", srv.handleGetReports)
-	http.HandleFunc("/api/reports", srv.handleGetReportsJSON)
-	http.HandleFunc("/api/chat", srv.handleChat)
-	http.HandleFunc("/api/projects", srv.handleGetProjects)
-	http.HandleFunc("/api/projects/create", srv.handleCreateProject)
-	http.HandleFunc("/api/status", srv.handleStatus)
+	// Route definitions with CORS
+	http.HandleFunc("/ingest", corsMiddleware(srv.handleIngest))
+	http.HandleFunc("/reports", corsMiddleware(srv.handleGetReports))
+	http.HandleFunc("/api/reports", corsMiddleware(srv.handleGetReportsJSON))
+	http.HandleFunc("/api/chat", corsMiddleware(srv.handleChat))
+	http.HandleFunc("/api/projects", corsMiddleware(srv.handleGetProjects))
+	http.HandleFunc("/api/projects/create", corsMiddleware(srv.handleCreateProject))
+	http.HandleFunc("/api/status", corsMiddleware(srv.handleStatus))
 	http.Handle("/metrics", promhttp.Handler())
 
 	port := os.Getenv("PORT")
@@ -450,4 +424,19 @@ func main() {
 
 	slog.Info("Apex Production Receiver starting", "port", port)
 	http.ListenAndServe(":"+port, nil)
+}
+
+func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Apex-API-Key")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next(w, r)
+	}
 }
