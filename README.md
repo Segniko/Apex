@@ -70,19 +70,6 @@ try {
 }
 ```
 
-## Managed AI & Security Architecture
-Apex is designed as a **Managed AI Provider**. This means the host (you) provides the AI "brain" (Gemini) while ensuring that your API keys are never exposed and your usage quotas are protected.
-
-- **Vaulted Secrets**: Your `GEMINI_API_KEY` stays on the server as an environment variable. It never travels to the browser or client agents.
-- **Intelligent Caching**: Duplicate crashes are identified by their fingerprint (SHA-256). We only run AI analysis once per unique crash and serve the cached insight to all subsequent hits, preserving your quota.
-- **Redis Rate Limiting**: Every project is capped on AI usage (Analysis & Chat) to prevent "Log Bombing" or accidental over-usage from draining your tokens.
-
-## Setup & Environment
-Ensure you have a `.env` file (copied from `.env.example`) with the following:
-- `GEMINI_API_KEY`: Your Google AI Studio key.
-- `DATABASE_URL`: Your CockroachDB/Postgres connection string.
-- `REDIS_URL`: Your Redis instance address.
-
 ## Join the Movement
 Apex is 100% Open Source. Every line of code, every design token, and every architectural decision belongs to the community.
 
