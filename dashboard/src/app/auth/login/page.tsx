@@ -1,6 +1,13 @@
 import Link from 'next/link';
+import { auth } from '../../../auth';
+import { redirect } from 'next/navigation';
 
-export default function Login() {
+export default async function Login() {
+    const session = await auth();
+    if (session) {
+        redirect("/dashboard/projects");
+    }
+
     return (
         <div className="min-h-screen bg-[#080808] flex items-center justify-center p-6 selection:bg-[#FFB800] selection:text-black">
             <div className="absolute inset-0 z-0 opacity-10 hazard-pattern pointer-events-none" />

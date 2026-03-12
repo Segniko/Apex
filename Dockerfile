@@ -1,5 +1,5 @@
 # Build Stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -10,21 +10,23 @@ RUN go mod download
 # Copy the source code
 COPY . .
 
-# Build the Receiver binary
-RUN go build -o receiver cmd/server/main.go
+# Build a truly static binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o receiver cmd/server/main.go
 
 # Production Stage
 FROM alpine:latest
 
 WORKDIR /root/
 
-# Copy the binary from the builder stage
+# Copy the binary and templates
 COPY --from=builder /app/receiver .
+COPY --from=builder /app/templates ./templates
 
 # Set environment defaults
-ENV PORT=8080
-ENV DATABASE_URL=postgres://postgres:postgres@postgres:5432/apex?sslmode=disable
+ENV PORT=8081
+ENV DATABASE_URL=postgresql://root@cockroach:26257/defaultdb?sslmode=disable
+ENV REDIS_URL=redis:6379
 
-EXPOSE 8080
+EXPOSE 8081
 
 CMD ["./receiver"]

@@ -1,8 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 export default function LandingPage() {
+  const { data: session } = useSession();
+  const dashboardLink = session ? "/dashboard/projects" : "/auth/login";
+
   return (
     <div className="min-h-screen bg-[#080808] text-white selection:bg-[#FFB800] selection:text-black">
       {/* Top Hazard Bar */}
@@ -17,7 +21,7 @@ export default function LandingPage() {
         <div className="flex gap-8 items-center text-xs font-mono font-bold uppercase tracking-widest text-gray-400 hidden md:flex">
           <Link href="/docs" className="hover:text-[#FFB800] transition-colors">Mission Log</Link>
           <a href="https://github.com/Segniko/Apex" target="_blank" className="hover:text-[#FFB800] transition-colors">GitHub</a>
-          <Link href="/auth/login" className="border border-[#FFB800] text-[#FFB800] px-6 py-3 hover:bg-[#FFB800] hover:text-black transition-colors shadow-[0_0_20px_rgba(255,184,0,0.2)]">
+          <Link href={dashboardLink} className="border border-[#FFB800] text-[#FFB800] px-6 py-3 hover:bg-[#FFB800] hover:text-black transition-colors shadow-[0_0_20px_rgba(255,184,0,0.2)]">
             Command Center
           </Link>
         </div>
@@ -59,7 +63,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col md:flex-row gap-6 justify-center pt-8">
-            <Link href="/auth/login" className="bg-[#FFB800] text-black px-10 py-4 font-black uppercase tracking-tighter hover:bg-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,184,0,0.3)]">
+            <Link href={dashboardLink} className="bg-[#FFB800] text-black px-10 py-4 font-black uppercase tracking-tighter hover:bg-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,184,0,0.3)]">
               Initialize Deployment
             </Link>
             <a href="https://github.com/Segniko/Apex" target='_blank' className="border border-[#222] text-gray-400 px-10 py-4 font-black uppercase tracking-tighter hover:border-[#FFB800] hover:text-white transition-all backdrop-blur-md">
@@ -191,7 +195,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           <h2 className="text-2xl font-black italic uppercase tracking-tighter">APEX <span className="text-[#FFB800]">SYSTEMS</span></h2>
           <div className="flex gap-12 text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-            <Link href="/auth/login" className="hover:text-[#FFB800]">Dashboard</Link>
+            <Link href={dashboardLink} className="hover:text-[#FFB800]">Dashboard</Link>
             <Link href="/docs" className="hover:text-[#FFB800]">Mission Log</Link>
             <span className="text-gray-800">Operational Log: 11-03-2026</span>
           </div>

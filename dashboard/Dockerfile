@@ -1,30 +1,34 @@
 # Build Stage
-FROM golang:1.24-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Copy dependency files first for caching
-COPY go.mod go.sum ./
-RUN go mod download
+COPY package.json package-lock.json ./
+RUN npm install
 
 # Copy the source code
 COPY . .
 
-# Build the Receiver binary
-RUN go build -o receiver cmd/server/main.go
+# Build the Next.js app
+# Ensure we disable lint/typecheck during build for speed/resilience if needed
+RUN npm run build
 
 # Production Stage
-FROM alpine:latest
+FROM node:20-alpine AS runner
 
-WORKDIR /root/
+WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/receiver .
+# Copy the build artifacts and node_modules
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
 # Set environment defaults
-ENV PORT=8080
-ENV DATABASE_URL=postgres://postgres:postgres@postgres:5432/apex?sslmode=disable
+ENV NODE_ENV=production
+ENV PORT=3000
 
-EXPOSE 8080
+EXPOSE 3000
 
-CMD ["./receiver"]
+CMD ["npm", "start"]

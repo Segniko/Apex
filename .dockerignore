@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.env
+.env.local
+dashboard/node_modules
+dashboard/.next
+apex.db
+*.exe
+bin/
