@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -47,13 +49,13 @@ type Server struct {
 	isPersistent bool
 }
 
-func NewServer(store storage.Provider, rdb *redis.Client) *Server {
+func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Server {
 	recv, _ := receiver.New()
 	s := &Server{
 		store:        store,
 		rdb:          rdb,
 		recv:         recv,
-		ai:           tacticalai.NewTacticalAI(),
+		ai:           tacticalai.NewTacticalAI(geminiKey),
 		isPersistent: false, // Will be set in main
 	}
 
@@ -92,13 +94,26 @@ func (s *Server) worker(id int) {
 					continue
 				}
 
-				// Run AI Forensics before saving
-				insight := s.recv.Analyze(report)
-				report.AiInsight = insight
+				// Run Gemini AI Forensics with Caching
+				fingerprint := generateFingerprint(report.Message, report.StackTrace)
+				cacheKey := "ai_insight:" + fingerprint
+				
+				insight, err := s.rdb.Get(ctx, cacheKey).Result()
+				if err == nil && insight != "" {
+					slog.Info("Using cached AI insight", "worker_id", id, "fingerprint", fingerprint)
+					report.AiInsight = insight
+				} else {
+					slog.Info("Generating new AI insight", "worker_id", id, "fingerprint", fingerprint)
+					insight = s.ai.AnalyzeReport(report.Message, report.StackTrace)
+					report.AiInsight = insight
+					
+					// Cache the insight for 24 hours
+					s.rdb.Set(ctx, cacheKey, insight, 24*time.Hour)
+				}
 
 				projectID := message.Values["project_id"].(string)
 
-				err := s.store.SaveReport(report, projectID)
+				err = s.store.SaveReport(report, projectID)
 				if err != nil {
 					slog.Error("Failed to save report", "worker_id", id, "error", err)
 				} else {
@@ -107,6 +122,13 @@ func (s *Server) worker(id int) {
 			}
 		}
 	}
+}
+
+func generateFingerprint(message, stackTrace string) string {
+	h := sha256.New()
+	h.Write([]byte(message))
+	h.Write([]byte(stackTrace))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
@@ -379,6 +401,9 @@ func main() {
 			}
 		}
 		slog.Warn("Database not ready, retrying in 2s...", "attempt", i+1, "error", pgErr)
+		if pgErr == nil && err != nil {
+			slog.Warn("Initialization failed", "error", err)
+		}
 		time.Sleep(2 * time.Second)
 	}
 
@@ -399,7 +424,12 @@ func main() {
 	})
 	slog.Info("Redis connection initialized", "addr", rdbAddr)
 
-	srv := NewServer(store, rdb)
+	geminiKey := os.Getenv("GEMINI_API_KEY")
+	if geminiKey == "" {
+		slog.Warn("GEMINI_API_KEY not set. AI unit will be in degraded mode.")
+	}
+
+	srv := NewServer(store, rdb, geminiKey)
 	if store != nil {
 		srv.isPersistent = true
 	}

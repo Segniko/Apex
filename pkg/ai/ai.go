@@ -1,93 +1,95 @@
 package ai
 
 import (
+	"context"
 	"fmt"
-	"math/rand"
-	"strings"
-	"time"
+	"log"
+
+	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/api/option"
 )
 
-// TacticalAI represents the core engine for chat intelligence.
+// TacticalAI represents the core engine for chat intelligence powered by Gemini.
 type TacticalAI struct {
-	rng *rand.Rand
+	client *genai.Client
+	model  *genai.GenerativeModel
 }
 
-// NewTacticalAI initializes a new AI engine.
-func NewTacticalAI() *TacticalAI {
-	return &TacticalAI{
-		rng: rand.New(rand.NewSource(time.Now().UnixNano())),
+// NewTacticalAI initializes a new AI engine using the Gemini API.
+func NewTacticalAI(apiKey string) *TacticalAI {
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		log.Printf("❌ APEX_AI: Failed to initialize Gemini client: %v", err)
+		return nil
 	}
-}
 
-var tacticalKeywords = []string{
-	"hi", "hello", "greetings", "hey",
-	"status", "deployment", "health", "node",
-	"nil", "pointer", "null", "dereference", "memory",
-	"database", "sql", "cockroach", "postgres", "db", "vault",
-	"error", "fault", "crash", "bug", "panic", "stack", "trace",
-	"decode", "analyze", "forensic", "signal", "ingest", "redis",
-	"help", "commands", "manual", "instruction",
-	"programming", "code", "go", "python", "javascript", "apex",
+	model := client.GenerativeModel("gemini-1.5-flash-latest")
+	model.SystemInstruction = &genai.Content{
+		Parts: []genai.Part{
+			genai.Text("You are APEX_AI, a tactical forensics unit for the Apex Monitoring System. " +
+				"Your prime directive is real-time root-cause reconstruction and system audit. " +
+				"You assist developers in understanding crash reports, telemetry, and system architecture. " +
+				"Be concise, technical, and use tactical terminology. If a Query is non-technical, politely steer back to system forensics."),
+		},
+	}
+
+	return &TacticalAI{
+		client: client,
+		model:  model,
+	}
 }
 
 // Chat generates a tactical response based on the message and optional report context.
-func (ai *TacticalAI) Chat(message string, reportID string) string {
-	msg := strings.ToLower(message)
-
-	// Guard: Filter for tactical/programming topics only
-	if !containsAny(msg, tacticalKeywords...) {
-		return "NON_TACTICAL_QUERY: My core logic is restricted to Apex Systems forensics and programming telemetry. For general inquiries, please contact: tactical-support@apex.systems"
+func (ai *TacticalAI) Chat(message string, reportContext string) string {
+	if ai == nil || ai.client == nil {
+		return "IDENTITY_ERROR: Gemini client not initialized. Ensure GEMINI_API_KEY is set in the environment."
 	}
 
-	// Context Matrix
-	switch {
-	case containsAny(msg, "who are you", "what are you", "identity"):
-		return "IDENTITY_CONFIRM: I am APEX_AI, a tactical forensics unit designed to audit distributed system failures. My prime directive is real-time root-cause reconstruction."
-
-	case containsAny(msg, "what is apex", "about apex", "project overview"):
-		return "PROJECT_BRIEF: Apex is a high-performance, open-source monitoring engine. It uses Zsync Protobuf DNA for telemetry and CockroachDB for global persistence. Architecture: Recovery-First."
-
-	case containsAny(msg, "hi", "hello", "greetings", "hey"):
-		return "APEX_AI unit online. Ready for tactical forensics. I am monitoring the CockroachDB clusters and Redis ingest streams. How can I assist your audit?"
-
-	case containsAny(msg, "status", "deployment", "health"):
-		return "Telemetry indicates the current deployment is under heavy monitoring. Ingest buffer velocity is steady. No anomalies detected in the last 300ms. All services are tactical."
-
-	case containsAny(msg, "nil", "pointer", "null", "dereference"):
-		return "NIL_POINTER_ANALYSIS: This is a common failure in unsafe memory operations. I recommend a tactical audit of your reference guards. Check the stack trace for the 'dereference' instruction."
-
-	case containsAny(msg, "database", "sql", "cockroach", "postgres", "db"):
-		return "DATABASE_INTEGRITY: CockroachDB clusters are reporting 99.99% consistency. If you see 'Scan Errors', ensure your COALESCE logic is applied to legacy schema fields."
-
-	case containsAny(msg, "error", "fault", "crash", "bug", "panic"):
-		return "CRASH_FORENSICS: I have indexed the recent failure batches. Which specific 'INTELLIGENT_DECODE' ID should I perform a deep-trace on?"
-
-	case reportID != "" || containsAny(msg, "decode", "trace", "analyze", "project"):
-		if reportID != "" {
-			return fmt.Sprintf("DECODING_TRACE[%s]: Analyzing packet structure for high-fidelity reconstruction. Initial findings suggest an operational bottleneck in the ingest-to-vault pipeline.", reportID[:8])
-		}
-		return "DECODING_TRACE: Analyzing packet structure for high-fidelity reconstruction. Provide a specific Error ID for forensic reconstruction."
-
-	case containsAny(msg, "help", "commands", "manual"):
-		return "TACTICAL_MANUAL: You can ask about 'status', 'deployment health', 'database integrity', or provide a specific 'Report ID' for a deep forensic trace."
-
-	default:
-		responses := []string{
-			"Processing inquiry... Tactical analysis suggests we remain vigilant on the current telemetry stream.",
-			"Data inconclusive for a deep-dive. Provide a specific Error ID for forensic reconstruction.",
-			"I am monitoring the tactical nodes. Telemetry is flowing smoothly through the Redis buffer.",
-			"Inquiry logged. Proceed with caution on the recent deployment patches.",
-			"Signal noise detected. Re-phrase your query using standard tactical terminology.",
-		}
-		return responses[ai.rng.Intn(len(responses))]
+	ctx := context.Background()
+	prompt := message
+	if reportContext != "" {
+		prompt = fmt.Sprintf("Context: [Project Crash ID: %s]\n\nUser Question: %s", reportContext, message)
 	}
+
+	resp, err := ai.model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return fmt.Sprintf("SIGNAL_LOSS: Failed to generate response: %v", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "SIGNAL_NOISE: Data inconclusive. Gemini returned an empty response."
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	return fmt.Sprintf("%v", part)
 }
 
-func containsAny(s string, keywords ...string) bool {
-	for _, k := range keywords {
-		if strings.Contains(s, k) {
-			return true
-		}
+// AnalyzeReport performs a deep-trace forensic analysis of a crash report.
+func (ai *TacticalAI) AnalyzeReport(message string, stackTrace string) string {
+	if ai == nil || ai.client == nil {
+		return "FORENSIC_LEVEL_1: Gemini not initialized. Basic pattern analysis suggested."
 	}
-	return false
+
+	ctx := context.Background()
+	prompt := fmt.Sprintf("Perform a tactical forensic analysis on this crash:\n\nError: %s\nStack Trace:\n%s\n\nProvide a concise 'TACTICAL_FIX'.", message, stackTrace)
+
+	resp, err := ai.model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return fmt.Sprintf("FORENSIC_SIG_LOSS: %v", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "FORENSIC_DATA_GAP: Empty response from AI node."
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	return fmt.Sprintf("%v", part)
+}
+
+// Close releases Gemini resources.
+func (ai *TacticalAI) Close() {
+	if ai != nil && ai.client != nil {
+		ai.client.Close()
+	}
 }

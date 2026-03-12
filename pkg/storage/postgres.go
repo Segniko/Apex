@@ -25,10 +25,10 @@ func NewPostgres(connStr string) (*Store, error) {
 }
 
 func (s *Store) Initialize() error {
-	schema := `
+	// 1. Create base tables
+	tables := `
 	CREATE TABLE IF NOT EXISTS crash_reports (
 		id UUID PRIMARY KEY,
-		project_id UUID,
 		message TEXT,
 		stack_trace TEXT,
 		os TEXT,
@@ -47,13 +47,27 @@ func (s *Store) Initialize() error {
 		ingest_key TEXT UNIQUE,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
+	`
+	if _, err := s.db.Exec(tables); err != nil {
+		return err
+	}
 
+	// 2. Ensure project_id column exists (Manual Migration)
+	if _, err := s.db.Exec("ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS project_id UUID"); err != nil {
+		return err
+	}
+
+	// 3. Create indices
+	indices := `
 	CREATE INDEX IF NOT EXISTS idx_reports_created_at ON crash_reports(created_at);
 	CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 	CREATE INDEX IF NOT EXISTS idx_reports_project_id ON crash_reports(project_id);
 	`
-	_, err := s.db.Exec(schema)
-	return err
+	if _, err := s.db.Exec(indices); err != nil {
+		return err
+	}
+	
+	return nil
 }
 
 func (s *Store) SaveReport(r *apex.CrashReport, projectID string) error {
