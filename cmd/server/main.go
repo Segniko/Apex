@@ -11,9 +11,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/joho/godotenv"
 	tacticalai "github.com/apex/monitor/pkg/ai"
+	"github.com/apex/monitor/pkg/limiter"
 	"github.com/apex/monitor/pkg/receiver"
 	"github.com/apex/monitor/pkg/storage"
 	apex "github.com/apex/monitor/proto"
@@ -46,6 +49,7 @@ type Server struct {
 	rdb          *redis.Client
 	recv         *receiver.Receiver
 	ai           *tacticalai.TacticalAI
+	limiter      *limiter.RateLimiter
 	isPersistent bool
 }
 
@@ -56,6 +60,7 @@ func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Ser
 		rdb:          rdb,
 		recv:         recv,
 		ai:           tacticalai.NewTacticalAI(geminiKey),
+		limiter:      limiter.NewRateLimiter(rdb),
 		isPersistent: false, // Will be set in main
 	}
 
@@ -97,18 +102,27 @@ func (s *Server) worker(id int) {
 				// Run Gemini AI Forensics with Caching
 				fingerprint := generateFingerprint(report.Message, report.StackTrace)
 				cacheKey := "ai_insight:" + fingerprint
-				
+
 				insight, err := s.rdb.Get(ctx, cacheKey).Result()
 				if err == nil && insight != "" {
 					slog.Info("Using cached AI insight", "worker_id", id, "fingerprint", fingerprint)
 					report.AiInsight = insight
 				} else {
-					slog.Info("Generating new AI insight", "worker_id", id, "fingerprint", fingerprint)
-					insight = s.ai.AnalyzeReport(report.Message, report.StackTrace)
+					// Apply Rate Limit: 20 insights per hour per project
+					projectID := message.Values["project_id"].(string)
+					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 20, 1*time.Hour)
+
+					if !allowed {
+						slog.Warn("AI Analysis rate limit exceeded", "project_id", projectID)
+						insight = "RATE_LIMIT_EXCEEDED: New AI analysis deferred to protect quota."
+					} else {
+						slog.Info("Generating new AI insight", "worker_id", id, "fingerprint", fingerprint)
+						insight = s.ai.AnalyzeReport(report.Message, report.StackTrace)
+
+						// Cache the insight for 24 hours
+						s.rdb.Set(ctx, cacheKey, insight, 24*time.Hour)
+					}
 					report.AiInsight = insight
-					
-					// Cache the insight for 24 hours
-					s.rdb.Set(ctx, cacheKey, insight, 24*time.Hour)
 				}
 
 				projectID := message.Values["project_id"].(string)
@@ -270,6 +284,15 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Rate Limit: 5 chats per hour per report_id (proxy for project/user)
+	allowed, _ := s.limiter.Allow(r.Context(), req.ReportID+":chat", 5, 1*time.Hour)
+	if !allowed {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		json.NewEncoder(w).Encode(map[string]string{"response": "RATE_LIMIT: Quota exceeded for this session."})
+		return
+	}
+
 	response := s.ai.Chat(req.Message, req.ReportID)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -353,6 +376,15 @@ func main() {
 	// Initialize structured logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
+
+	// Load configuration
+	godotenv.Load() // Root .env
+	envLocalPath := filepath.Join("dashboard", ".env.local")
+	if _, err := os.Stat(envLocalPath); err == nil {
+		if err := godotenv.Load(envLocalPath); err == nil {
+			slog.Info("Loaded configuration from dashboard/.env.local")
+		}
+	}
 
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
