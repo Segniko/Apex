@@ -14,9 +14,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     trustHost: true,
     callbacks: {
-        async jwt({ token, user, account }) {
-            if (account && user) {
-                token.id = user.id;
+        async jwt({ token, account }) {
+            // Pin identity to the permanent GitHub Provider Account ID
+            if (account) {
+                token.id = account.providerAccountId;
             }
             return token;
         },
