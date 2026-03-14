@@ -455,7 +455,10 @@ func main() {
 
 	srv := NewServer(store, rdb, geminiKey)
 	if store != nil {
-		srv.isPersistent = true
+		// Only mark as persistent if it's not the internal MemoryStore
+		if _, ok := store.(*storage.MemoryStore); !ok {
+			srv.isPersistent = true
+		}
 	}
 
 	// Route definitions with CORS
