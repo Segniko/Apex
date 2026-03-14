@@ -443,10 +443,30 @@ func main() {
 	if rdbAddr == "" {
 		rdbAddr = "127.0.0.1:6379"
 	}
-	rdb := redis.NewClient(&redis.Options{
-		Addr: rdbAddr,
-	})
-	slog.Info("Redis connection initialized", "addr", rdbAddr)
+
+	var rdb *redis.Client
+	if len(rdbAddr) > 8 && (rdbAddr[:8] == "redis://" || rdbAddr[:9] == "rediss://") {
+		opt, err := redis.ParseURL(rdbAddr)
+		if err != nil {
+			slog.Error("Failed to parse Redis URL", "url", rdbAddr, "error", err)
+			rdb = redis.NewClient(&redis.Options{Addr: "127.0.0.1:6379"})
+		} else {
+			rdb = redis.NewClient(opt)
+			slog.Info("Redis connection initialized via URL", "addr", opt.Addr)
+		}
+	} else {
+		rdb = redis.NewClient(&redis.Options{
+			Addr: rdbAddr,
+		})
+		slog.Info("Redis connection initialized via Addr", "addr", rdbAddr)
+	}
+
+	// Verify Redis connection
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		slog.Error("Redis connection verification failed", "error", err)
+	} else {
+		slog.Info("Redis connection verified")
+	}
 
 	geminiKey := os.Getenv("GEMINI_API_KEY")
 	if geminiKey == "" {

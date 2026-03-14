@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react';
 import { fetchProjects, createProject, Project, fetchStatus } from '@/lib/api';
 
 export default function ProjectsHub() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -18,16 +18,19 @@ export default function ProjectsHub() {
         // Check infrastructure status
         fetchStatus().then(status => setIsPersistent(status.persistent));
 
-        if (session?.user?.id || session?.user?.name) {
-            const userId = (session.user as any).id || session.user.name || 'anonymous';
+        if (status === 'loading') return;
+
+        if (status === 'authenticated') {
+            const userId = (session?.user as any).id || session?.user?.name || 'anonymous';
             fetchProjects(userId).then((data) => {
                 setProjects(data);
                 setLoading(false);
             });
         } else {
+            // Unauthenticated or Error
             setLoading(false);
         }
-    }, [session]);
+    }, [session, status]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();

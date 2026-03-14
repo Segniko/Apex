@@ -13,4 +13,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         maxAge: 1 * 24 * 60 * 60, // 1 day
     },
     trustHost: true,
+    callbacks: {
+        session({ session, token }) {
+            if (token.sub && session.user) {
+                (session.user as any).id = token.sub;
+            }
+            return session;
+        },
+    }
 });
