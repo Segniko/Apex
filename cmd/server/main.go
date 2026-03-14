@@ -14,13 +14,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/joho/godotenv"
 	tacticalai "github.com/apex/monitor/pkg/ai"
 	"github.com/apex/monitor/pkg/limiter"
 	"github.com/apex/monitor/pkg/receiver"
 	"github.com/apex/monitor/pkg/storage"
 	apex "github.com/apex/monitor/proto"
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -131,7 +131,7 @@ func (s *Server) worker(id int) {
 					report.AiInsight = insight
 				} else {
 					// Apply Rate Limit: 20 insights per hour per project
-					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 20, 1*time.Hour)
+					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 50, 1*time.Hour)
 
 					if !allowed {
 						slog.Warn("AI Analysis rate limit exceeded", "project_id", projectID)
