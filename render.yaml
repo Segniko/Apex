@@ -22,11 +22,11 @@ services:
       - key: PORT
         value: 8081
 
+  - type: redis
+    name: apex-cache
+    plan: free
+    ipAllowList: [] # Only allow internal connections
+
 databases:
   - name: apex-db
     plan: free
-
-redis:
-  - name: apex-cache
-    plan: free
-    ipAllowList: [] # Only allow internal connections
