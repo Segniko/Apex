@@ -60,8 +60,8 @@ export default function ProjectsHub() {
                     <span className="font-black italic tracking-tighter uppercase text-xl">APEX <span className="text-[#FFB800]">Command</span></span>
 
                     <div className={`px-3 py-1 text-[10px] font-mono border uppercase tracking-widest flex items-center gap-2 ${isPersistent
-                            ? 'border-green-500/30 text-green-500 bg-green-500/5'
-                            : 'border-red-500/30 text-red-500 bg-red-500/5 animate-pulse'
+                        ? 'border-green-500/30 text-green-500 bg-green-500/5'
+                        : 'border-red-500/30 text-red-500 bg-red-500/5 animate-pulse'
                         }`}>
                         <div className={`w-1 h-1 rounded-full ${isPersistent ? 'bg-green-500' : 'bg-red-500'}`} />
                         {isPersistent ? 'Vault Online' : 'Infrastructure Offline (No Save)'}
@@ -69,12 +69,6 @@ export default function ProjectsHub() {
                 </div>
 
                 <div className="flex items-center gap-6">
-                    <div className="hidden md:flex flex-col items-end">
-                        <span className="text-[8px] font-mono text-gray-500 uppercase">Identity_Token</span>
-                        <span className="text-[10px] font-mono text-[#FFB800] tracking-tighter">
-                            {(session?.user as any)?.id ? (session?.user as any).id.substring(0, 15) : "GUEST_ANON"}
-                        </span>
-                    </div>
                     <UserButton />
                 </div>
             </header>
