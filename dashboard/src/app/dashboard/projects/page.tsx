@@ -21,7 +21,7 @@ export default function ProjectsHub() {
         if (status === 'loading') return;
 
         // Diagnostic: Log current session state
-        const userId = (session?.user as any)?.id || session?.user?.name || 'anonymous';
+        const userId = (session?.user as any)?.id || session?.user?.email || session?.user?.name || 'anonymous';
         console.log(`[APEX_DEBUG] Projects Hub Effect - Status: ${status}, UserID: ${userId}`);
 
         if (status === 'authenticated') {
@@ -30,14 +30,13 @@ export default function ProjectsHub() {
                 setLoading(false);
             });
         } else {
-            // Unauthenticated or Error
             setLoading(false);
         }
     }, [session, status]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        const userId = (session?.user as any)?.id || session?.user?.name || 'anonymous';
+        const userId = (session?.user as any)?.id || session?.user?.email || session?.user?.name || 'anonymous';
         console.log(`[APEX_DEBUG] Creating project for UserID: ${userId}`);
 
         if (!projectName.trim()) return;
@@ -68,7 +67,16 @@ export default function ProjectsHub() {
                         {isPersistent ? 'Vault Online' : 'Infrastructure Offline (No Save)'}
                     </div>
                 </div>
-                <UserButton />
+
+                <div className="flex items-center gap-6">
+                    <div className="hidden md:flex flex-col items-end">
+                        <span className="text-[8px] font-mono text-gray-500 uppercase">Identity_Token</span>
+                        <span className="text-[10px] font-mono text-[#FFB800] tracking-tighter">
+                            {(session?.user as any)?.id ? (session?.user as any).id.substring(0, 15) : "GUEST_ANON"}
+                        </span>
+                    </div>
+                    <UserButton />
+                </div>
             </header>
 
             <main className="max-w-5xl mx-auto px-6 py-20">

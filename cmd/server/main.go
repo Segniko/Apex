@@ -371,12 +371,14 @@ func (s *Server) handleGetProjects(w http.ResponseWriter, r *http.Request) {
 		userID = "anonymous"
 	}
 
+	slog.Info("[APEX_DEBUG] Fetching projects for identity", "user_id", userID)
 	projects, err := s.store.GetProjects(userID)
 	if err != nil {
 		slog.Error("Failed to fetch projects", "error", err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
+	slog.Info("[APEX_DEBUG] Projects found for identity", "user_id", userID, "count", len(projects))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(projects)
