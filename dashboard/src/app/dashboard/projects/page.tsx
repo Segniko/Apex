@@ -31,7 +31,7 @@ export default function ProjectsHub() {
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        const userId = (session?.user as any).id || session?.user?.name || 'anonymous';
+        const userId = (session?.user as any)?.id || session?.user?.name || 'anonymous';
         if (!projectName.trim()) return;
 
         setIsCreating(true);
