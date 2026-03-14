@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"time"
 
 	apex "github.com/apex/monitor/proto"
 	_ "github.com/lib/pq"
@@ -16,6 +17,11 @@ func NewPostgres(connStr string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Connection Pooling for Stability
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	if err := db.Ping(); err != nil {
 		return nil, err

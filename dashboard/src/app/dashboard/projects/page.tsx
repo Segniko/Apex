@@ -1,10 +1,10 @@
 'use client';
 
 import { UserButton } from '@/components/UserButton';
+import { createProject, fetchProjects, fetchStatus, Project } from '@/lib/api';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { fetchProjects, createProject, Project, fetchStatus } from '@/lib/api';
 
 export default function ProjectsHub() {
     const { data: session, status } = useSession();
@@ -20,8 +20,11 @@ export default function ProjectsHub() {
 
         if (status === 'loading') return;
 
+        // Diagnostic: Log current session state
+        const userId = (session?.user as any)?.id || session?.user?.name || 'anonymous';
+        console.log(`[APEX_DEBUG] Projects Hub Effect - Status: ${status}, UserID: ${userId}`);
+
         if (status === 'authenticated') {
-            const userId = (session?.user as any).id || session?.user?.name || 'anonymous';
             fetchProjects(userId).then((data) => {
                 setProjects(data);
                 setLoading(false);
@@ -35,6 +38,8 @@ export default function ProjectsHub() {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         const userId = (session?.user as any)?.id || session?.user?.name || 'anonymous';
+        console.log(`[APEX_DEBUG] Creating project for UserID: ${userId}`);
+
         if (!projectName.trim()) return;
 
         setIsCreating(true);
@@ -54,12 +59,11 @@ export default function ProjectsHub() {
                 <div className="flex items-center gap-4">
                     <div className="w-2 h-2 bg-[#FFB800] animate-pulse rounded-full" />
                     <span className="font-black italic tracking-tighter uppercase text-xl">APEX <span className="text-[#FFB800]">Command</span></span>
-                    
-                    <div className={`px-3 py-1 text-[10px] font-mono border uppercase tracking-widest flex items-center gap-2 ${
-                        isPersistent 
-                        ? 'border-green-500/30 text-green-500 bg-green-500/5' 
-                        : 'border-red-500/30 text-red-500 bg-red-500/5 animate-pulse'
-                    }`}>
+
+                    <div className={`px-3 py-1 text-[10px] font-mono border uppercase tracking-widest flex items-center gap-2 ${isPersistent
+                            ? 'border-green-500/30 text-green-500 bg-green-500/5'
+                            : 'border-red-500/30 text-red-500 bg-red-500/5 animate-pulse'
+                        }`}>
                         <div className={`w-1 h-1 rounded-full ${isPersistent ? 'bg-green-500' : 'bg-red-500'}`} />
                         {isPersistent ? 'Vault Online' : 'Infrastructure Offline (No Save)'}
                     </div>

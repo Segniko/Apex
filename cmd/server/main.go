@@ -130,8 +130,8 @@ func (s *Server) worker(id int) {
 					slog.Info("Using cached AI insight", "worker_id", id, "fingerprint", fingerprint)
 					report.AiInsight = insight
 				} else {
-					// Apply Rate Limit: 20 insights per hour per project
-					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 50, 1*time.Hour)
+					// Apply Rate Limit: 100 insights per hour per project
+					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 100, 1*time.Hour)
 
 					if !allowed {
 						slog.Warn("AI Analysis rate limit exceeded", "project_id", projectID)
@@ -415,27 +415,32 @@ func main() {
 	var err error
 
 	// Production Resilience: Retry connecting to DB
-	slog.Info("Attempting to connect to database...")
+	slog.Info("Attempting to connect to database...", "url_set", os.Getenv("DATABASE_URL") != "")
 	for i := 0; i < 5; i++ {
 		pgStore, pgErr := storage.NewPostgres(connStr)
 		if pgErr == nil {
 			if err = pgStore.Initialize(); err == nil {
 				store = pgStore
+				slog.Info("Database initialized successfully")
 				break
+			} else {
+				slog.Error("Database initialization failed", "attempt", i+1, "error", err)
 			}
-		}
-		slog.Warn("Database not ready, retrying in 2s...", "attempt", i+1, "error", pgErr)
-		if pgErr == nil && err != nil {
-			slog.Warn("Initialization failed", "error", err)
+		} else {
+			slog.Warn("Database connection failed", "attempt", i+1, "error", pgErr)
 		}
 		time.Sleep(2 * time.Second)
 	}
 
 	if store == nil {
-		slog.Error("Database connection failed, running in MEMORY mode (Reports will NOT persist after restart)")
+		if os.Getenv("DATABASE_URL") != "" {
+			slog.Error("CRITICAL: DATABASE_URL is set but connection FAILED. Falling back to Memory Mode.")
+		} else {
+			slog.Info("DATABASE_URL not set, using default Memory Mode.")
+		}
 		store = storage.NewMemoryStore()
 	} else {
-		slog.Info("Database connection established")
+		slog.Info("Persistent Vault Storage Online")
 	}
 
 	// Initialize Redis for Ingest Buffering
