@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	tacticalai "github.com/apex/monitor/pkg/ai"
@@ -138,7 +139,25 @@ func (s *Server) worker(id int) {
 						insight = "RATE_LIMIT_EXCEEDED: New AI analysis deferred to protect quota."
 					} else {
 						slog.Info("Generating new AI insight", "worker_id", id, "fingerprint", fingerprint)
-						insight = s.ai.AnalyzeReport(report.Message, report.StackTrace)
+
+						// 1. Get Repo Context (Source Code)
+						sourceContext := getSourceContext(report.StackTrace)
+
+						// 2. Get RAG Context (Historical Similarity)
+						similar, _ := s.store.GetSimilarReports(report.Message, 3, projectID)
+						historicalContext := ""
+						if len(similar) > 0 {
+							historicalContext = "\nHISTORICAL_SIMILARITY_DATA:\n"
+							for _, sr := range similar {
+								if sr.ErrorId == report.ErrorId {
+									continue
+								}
+								historicalContext += fmt.Sprintf("- Past Error: %s\n  Insight: %s\n", sr.Message, sr.AiInsight)
+							}
+						}
+
+						// 3. Analyze with high-context
+						insight = s.ai.AnalyzeReport(report.Message, report.StackTrace+historicalContext, sourceContext)
 
 						// Cache the insight for 24 hours
 						s.rdb.Set(ctx, cacheKey, insight, 24*time.Hour)
@@ -162,6 +181,44 @@ func generateFingerprint(message, stackTrace string) string {
 	h.Write([]byte(message))
 	h.Write([]byte(stackTrace))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// getSourceContext attempts to extract file paths from a stack trace and read the source code.
+func getSourceContext(stackTrace string) map[string]string {
+	context := make(map[string]string)
+	lines := strings.Split(stackTrace, "\n")
+	
+	// Basic regex for file paths (e.g., /path/to/file.go:123 or C:\path\to\file.go:123)
+	// We'll just look for existing files mentioned in the trace
+	for _, line := range lines {
+		// Look for common go/ts/js patterns
+		if !strings.Contains(line, ".go") && !strings.Contains(line, ".ts") && !strings.Contains(line, ".js") {
+			continue
+		}
+
+		// Try to find a path-like string
+		parts := strings.Fields(line)
+		for _, part := range parts {
+			cleanPath := strings.Trim(part, "(),: ")
+			// If it's an absolute path and exists, read it
+			if _, err := os.Stat(cleanPath); err == nil {
+				if _, ok := context[cleanPath]; !ok {
+					data, err := os.ReadFile(cleanPath)
+					if err == nil {
+						// Limit size to 2KB per file for prompt safety
+						if len(data) > 2048 {
+							data = data[:2048]
+						}
+						context[cleanPath] = string(data)
+					}
+				}
+			}
+		}
+		if len(context) >= 3 { // Limit to 3 files max
+			break
+		}
+	}
+	return context
 }
 
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
@@ -324,7 +381,17 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	iter, err := s.ai.ChatStream(ctx, req.Message, req.ReportID)
+
+	// Get context for the report if ID is provided
+	sourceContext := make(map[string]string)
+	if req.ReportID != "" {
+		reports, err := s.store.GetReports(1, req.ReportID)
+		if err == nil && len(reports) > 0 {
+			sourceContext = getSourceContext(reports[0].StackTrace)
+		}
+	}
+
+	iter, err := s.ai.ChatStream(ctx, req.Message, req.ReportID, sourceContext)
 	if err != nil {
 		slog.Error("Failed to start AI stream", "error", err)
 		fmt.Fprintf(w, "data: SIGNAL_LOSS: %v\n\n", err)

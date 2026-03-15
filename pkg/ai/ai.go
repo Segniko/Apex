@@ -43,23 +43,33 @@ func NewTacticalAI(apiKey string) *TacticalAI {
 	}
 }
 
-// ChatStream returns a stream iterator for real-time response generation.
-func (ai *TacticalAI) ChatStream(ctx context.Context, message string, reportContext string) (*genai.GenerateContentResponseIterator, error) {
+// ChatStream returns a stream iterator for real-time response generation with context.
+func (ai *TacticalAI) ChatStream(ctx context.Context, message string, reportContext string, sourceContext map[string]string) (*genai.GenerateContentResponseIterator, error) {
 	if ai == nil || ai.client == nil {
 		return nil, fmt.Errorf("IDENTITY_ERROR: Gemini client not initialized")
 	}
 
 	prompt := message
 	if reportContext != "" {
-		prompt = fmt.Sprintf("Context: [Project Crash ID: %s]\n\nUser Question: %s", reportContext, message)
+		prompt = fmt.Sprintf("Context: [Project Crash ID: %s]\n\n", reportContext)
 	}
+
+	if len(sourceContext) > 0 {
+		prompt += "SOURCE_CODE_TELEMETRY:\n"
+		for file, code := range sourceContext {
+			prompt += fmt.Sprintf("--- FILE: %s ---\n%s\n", file, code)
+		}
+		prompt += "\n"
+	}
+
+	prompt += fmt.Sprintf("User Question: %s", message)
 
 	iter := ai.model.GenerateContentStream(ctx, genai.Text(prompt))
 	return iter, nil
 }
 
-// Chat generates a tactical response based on the message and optional report context.
-func (ai *TacticalAI) Chat(message string, reportContext string) string {
+// Chat generates a tactical response based on the message, report context, and source code.
+func (ai *TacticalAI) Chat(message string, reportContext string, sourceContext map[string]string) string {
 	if ai == nil || ai.client == nil {
 		return "IDENTITY_ERROR: Gemini client not initialized. Ensure GEMINI_API_KEY is set in the environment."
 	}
@@ -67,8 +77,18 @@ func (ai *TacticalAI) Chat(message string, reportContext string) string {
 	ctx := context.Background()
 	prompt := message
 	if reportContext != "" {
-		prompt = fmt.Sprintf("Context: [Project Crash ID: %s]\n\nUser Question: %s", reportContext, message)
+		prompt = fmt.Sprintf("Context: [Project Crash ID: %s]\n\n", reportContext)
 	}
+
+	if len(sourceContext) > 0 {
+		prompt += "SOURCE_CODE_TELEMETRY:\n"
+		for file, code := range sourceContext {
+			prompt += fmt.Sprintf("--- FILE: %s ---\n%s\n", file, code)
+		}
+		prompt += "\n"
+	}
+
+	prompt += fmt.Sprintf("User Question: %s", message)
 
 	resp, err := ai.model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
@@ -83,14 +103,23 @@ func (ai *TacticalAI) Chat(message string, reportContext string) string {
 	return fmt.Sprintf("%v", part)
 }
 
-// AnalyzeReport performs a deep-trace forensic analysis of a crash report.
-func (ai *TacticalAI) AnalyzeReport(message string, stackTrace string) string {
+// AnalyzeReport performs a deep-trace forensic analysis with source code context.
+func (ai *TacticalAI) AnalyzeReport(message string, stackTrace string, sourceContext map[string]string) string {
 	if ai == nil || ai.client == nil {
 		return "FORENSIC_LEVEL_1: Gemini not initialized. Basic pattern analysis suggested."
 	}
 
 	ctx := context.Background()
-	prompt := fmt.Sprintf("Perform a tactical forensic analysis on this crash:\n\nError: %s\nStack Trace:\n%s\n\nProvide a structured breakdown including 'ROOT_CAUSE:', 'IMPACT_ASSESSMENT:', and a concise 'TACTICAL_FIX:'. Use plain text headers (uppercase) and lists for clarity. Do not use '**' for bolding.", message, stackTrace)
+	
+	sourceText := ""
+	if len(sourceContext) > 0 {
+		sourceText = "\nRELEVANT_SOURCE_CODE:\n"
+		for file, code := range sourceContext {
+			sourceText += fmt.Sprintf("--- FILE: %s ---\n%s\n", file, code)
+		}
+	}
+
+	prompt := fmt.Sprintf("Perform a tactical forensic analysis on this crash:\n\nError: %s\nStack Trace:\n%s%s\n\nProvide a structured breakdown including 'ROOT_CAUSE:', 'IMPACT_ASSESSMENT:', and 'TACTICAL_FIX:'. For the fix, provide a Markdown code block with a unified diff if possible. Use plain text headers (uppercase) and lists for clarity. Do not use '**' for bolding.", message, stackTrace, sourceText)
 
 	resp, err := ai.model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {

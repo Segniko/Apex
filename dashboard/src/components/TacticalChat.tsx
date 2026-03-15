@@ -125,7 +125,7 @@ export function TacticalChat() {
                     <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-[#080808]">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] p-3 rounded text-[11px] font-mono leading-relaxed ${m.role === 'ai'
+                                <div className={`max-w-[90%] p-3 rounded text-[11px] font-mono leading-relaxed ${m.role === 'ai'
                                         ? 'bg-[#FFB800]/5 border border-[#FFB800]/20 text-[#FFB800]/80'
                                         : 'bg-[#222] text-gray-300 border border-[#333]'
                                     }`}>
@@ -133,7 +133,35 @@ export function TacticalChat() {
                                         {m.role === 'ai' ? 'APEX_DECODE' : 'OPERATOR'}
                                     </span>
                                     <div className="whitespace-pre-wrap">
-                                        {m.text}
+                                        {m.text.split('```').map((part, index) => {
+                                            if (index % 2 === 1) {
+                                                // Code block
+                                                const lines = part.split('\n');
+                                                const lang = lines[0].trim();
+                                                const code = lines.slice(1).join('\n');
+                                                const isDiff = lang === 'diff' || code.trim().startsWith('---') || code.trim().startsWith('@@');
+
+                                                return (
+                                                    <div key={index} className="my-2 p-2 bg-black border border-[#FFB800]/10 rounded overflow-x-auto">
+                                                        {lang && <div className="text-[8px] opacity-30 mb-1 uppercase">{lang}</div>}
+                                                        <div className="text-[10px] leading-tight">
+                                                            {code.split('\n').map((line, li) => (
+                                                                <div key={li} className={
+                                                                    isDiff ? (
+                                                                        line.startsWith('+') ? 'text-green-500/80 bg-green-500/5' :
+                                                                        line.startsWith('-') ? 'text-red-500/80 bg-red-500/5' :
+                                                                        line.startsWith('@@') ? 'text-blue-400/60' : ''
+                                                                    ) : ''
+                                                                }>
+                                                                    {line}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return part;
+                                        })}
                                     </div>
                                 </div>
                             </div>

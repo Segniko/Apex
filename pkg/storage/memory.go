@@ -85,3 +85,21 @@ func (m *MemoryStore) ValidateKey(key string) (string, error) {
 	// Fallback for demo
 	return "00000000-0000-0000-0000-000000000000", nil
 }
+func (m *MemoryStore) GetSimilarReports(message string, limit int, projectID string) ([]*apex.CrashReport, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var similar []*apex.CrashReport
+	// Very simple prefix/containment match for MemoryStore
+	for i := len(m.reports) - 1; i >= 0; i-- {
+		r := m.reports[i]
+		if (projectID == "" || m.reportProject[r.ErrorId] == projectID) && 
+		   (len(r.Message) > 5 && message[:5] == r.Message[:5]) {
+			similar = append(similar, r)
+		}
+		if len(similar) >= limit {
+			break
+		}
+	}
+	return similar, nil
+}

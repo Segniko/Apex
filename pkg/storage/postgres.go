@@ -116,3 +116,51 @@ func (s *Store) GetDB() *sql.DB {
 	}
 	return s.db
 }
+func (s *Store) GetSimilarReports(message string, limit int, projectID string) ([]*apex.CrashReport, error) {
+	// Simple text similarity using ILIKE and prefix matching for RAG context
+	query := `
+	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), EXTRACT(EPOCH FROM created_at)::BIGINT
+	FROM crash_reports 
+	WHERE project_id::text = $2 AND (message ILIKE $3 OR stack_trace ILIKE $3)
+	ORDER BY created_at DESC 
+	LIMIT $1
+	`
+	// Match first 15 chars for similarity
+	pattern := "%"
+	if len(message) > 15 {
+		pattern = "%" + message[:15] + "%"
+	} else if len(message) > 0 {
+		pattern = "%" + message + "%"
+	}
+
+	rows, err := s.db.Query(query, limit, projectID, pattern)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	reports := make([]*apex.CrashReport, 0)
+	for rows.Next() {
+		r := &apex.CrashReport{Context: &apex.DeviceContext{}}
+		var timestamp int64
+		err := rows.Scan(
+			&r.ErrorId,
+			&r.Message,
+			&r.StackTrace,
+			&r.Context.Os,
+			&r.Context.Arch,
+			&r.Context.TotalMemory,
+			&r.Context.FreeMemory,
+			&r.Context.BatteryLevel,
+			&r.AiInsight,
+			&timestamp,
+		)
+		if err != nil {
+			return nil, err
+		}
+		r.Timestamp = timestamp
+		reports = append(reports, r)
+	}
+
+	return reports, nil
+}

@@ -23,4 +23,5 @@ type Provider interface {
 	SaveProject(p *Project) error
 	GetProjects(userID string) ([]*Project, error)
 	ValidateKey(key string) (string, error)
+	GetSimilarReports(message string, limit int, projectID string) ([]*apex.CrashReport, error)
 }
