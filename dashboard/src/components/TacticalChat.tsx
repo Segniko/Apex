@@ -12,38 +12,10 @@ export function TacticalChat() {
     const [reportId, setReportId] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const handleContextChat = (e: any) => {
-            const { errorId, message } = e.detail;
-            setIsOpen(true);
-            setReportId(errorId);
-            setMessages([
-                { role: 'ai', text: `APEX_AI initialized with Error_ID: ${errorId.substring(0, 12)}. Analyzing specific telemetry...` },
-                { role: 'user', text: `Can you explain why this error happened? "${message}"` }
-            ]);
-            // Automatically trigger the AI response for the user's question
-            // We can't call sendMessage directly here because it uses 'input' state which isn't updated yet.
-            // But we can trigger a follow-up effect or just add the message.
-        };
+    const performChat = async (userMsg: string, currentReportId: string | null) => {
+        if (!userMsg.trim() || loading) return;
 
-        window.addEventListener('apex-chat-context', handleContextChat);
-        return () => window.removeEventListener('apex-chat-context', handleContextChat);
-    }, []);
-
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages]);
-
-    const sendMessage = async () => {
-        if (!input.trim() || loading) return;
-
-        const userMsg = input;
-        setInput('');
-        setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
         setLoading(true);
-
         // Add a placeholder for the AI response
         setMessages(prev => [...prev, { role: 'ai', text: '' }]);
 
@@ -54,7 +26,7 @@ export function TacticalChat() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: userMsg,
-                    report_id: reportId || "" 
+                    report_id: currentReportId || "" 
                 })
             });
 
@@ -89,10 +61,50 @@ export function TacticalChat() {
                 }
             }
         } catch (err) {
-            setMessages(prev => [...prev, { role: 'ai', text: 'CONNECTION_ERROR: Failed to reach tactical node.' }]);
+            setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1] = { role: 'ai', text: 'CONNECTION_ERROR: Failed to reach tactical node.' };
+                return newMessages;
+            });
         } finally {
             setLoading(false);
         }
+    };
+
+    useEffect(() => {
+        const handleContextChat = (e: any) => {
+            const { errorId, message } = e.detail;
+            setIsOpen(true);
+            setReportId(errorId);
+            
+            const introMsg = `APEX_AI initialized with Error_ID: ${errorId.substring(0, 12)}. Analyzing specific telemetry...`;
+            const userQuery = `Can you explain why this error happened? "${message}"`;
+            
+            setMessages([
+                { role: 'ai', text: introMsg },
+                { role: 'user', text: userQuery }
+            ]);
+            
+            performChat(userQuery, errorId);
+        };
+
+        window.addEventListener('apex-chat-context', handleContextChat);
+        return () => window.removeEventListener('apex-chat-context', handleContextChat);
+    }, []);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const sendMessage = async () => {
+        if (!input.trim() || loading) return;
+
+        const userMsg = input;
+        setInput('');
+        setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+        performChat(userMsg, reportId);
     };
 
     return (
