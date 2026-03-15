@@ -25,6 +25,9 @@ export function TacticalChat() {
         setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
         setLoading(true);
 
+        // Add a placeholder for the AI response
+        setMessages(prev => [...prev, { role: 'ai', text: '' }]);
+
         try {
             const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
             const res = await fetch(`${apiBase}/api/chat`, {
@@ -32,8 +35,37 @@ export function TacticalChat() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: userMsg })
             });
-            const data = await res.json();
-            setMessages(prev => [...prev, { role: 'ai', text: data.response }]);
+
+            if (!res.body) throw new Error("No response body");
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let aiText = "";
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const content = line.slice(6);
+                        if (content.trim() === '[DONE]') break;
+                        if (content === '') continue;
+
+                        aiText += content;
+                        
+                        // Update the last message (AI response)
+                        setMessages(prev => {
+                            const newMessages = [...prev];
+                            newMessages[newMessages.length - 1] = { role: 'ai', text: aiText };
+                            return newMessages;
+                        });
+                    }
+                }
+            }
         } catch (err) {
             setMessages(prev => [...prev, { role: 'ai', text: 'CONNECTION_ERROR: Failed to reach tactical node.' }]);
         } finally {

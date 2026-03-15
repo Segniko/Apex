@@ -303,8 +303,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Rate Limit: 5 chats per hour per report_id (proxy for project/user)
-	allowed, _ := s.limiter.Allow(r.Context(), req.ReportID+":chat", 5, 1*time.Hour)
+	// Rate Limit: 10 chats per hour per report_id (proxy for project/user)
+	allowed, _ := s.limiter.Allow(r.Context(), req.ReportID+":chat", 10, 1*time.Hour)
 	if !allowed {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -312,10 +312,53 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := s.ai.Chat(req.Message, req.ReportID)
+	// Set headers for SSE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"response": response})
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	ctx := r.Context()
+	iter, err := s.ai.ChatStream(ctx, req.Message, req.ReportID)
+	if err != nil {
+		slog.Error("Failed to start AI stream", "error", err)
+		fmt.Fprintf(w, "data: SIGNAL_LOSS: %v\n\n", err)
+		flusher.Flush()
+		return
+	}
+
+	slog.Info("[APEX_DEBUG] Starting AI stream generation", "report_id", req.ReportID)
+
+	for {
+		resp, err := iter.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			slog.Error("Stream iteration error", "error", err)
+			fmt.Fprintf(w, "data: SIGNAL_NOISE: %v\n\n", err)
+			break
+		}
+
+		if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+			for _, part := range resp.Candidates[0].Content.Parts {
+				text := fmt.Sprintf("%v", part)
+				// Format as SSE data
+				fmt.Fprintf(w, "data: %s\n\n", text)
+				flusher.Flush()
+			}
+		}
+	}
+
+	// Signal end of stream
+	fmt.Fprintf(w, "data: [DONE]\n\n")
+	flusher.Flush()
+	slog.Info("[APEX_DEBUG] AI stream generation complete", "report_id", req.ReportID)
 }
 
 func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {

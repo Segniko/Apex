@@ -43,6 +43,21 @@ func NewTacticalAI(apiKey string) *TacticalAI {
 	}
 }
 
+// ChatStream returns a stream iterator for real-time response generation.
+func (ai *TacticalAI) ChatStream(ctx context.Context, message string, reportContext string) (*genai.GenerateContentResponseIterator, error) {
+	if ai == nil || ai.client == nil {
+		return nil, fmt.Errorf("IDENTITY_ERROR: Gemini client not initialized")
+	}
+
+	prompt := message
+	if reportContext != "" {
+		prompt = fmt.Sprintf("Context: [Project Crash ID: %s]\n\nUser Question: %s", reportContext, message)
+	}
+
+	iter := ai.model.GenerateContentStream(ctx, genai.Text(prompt))
+	return iter, nil
+}
+
 // Chat generates a tactical response based on the message and optional report context.
 func (ai *TacticalAI) Chat(message string, reportContext string) string {
 	if ai == nil || ai.client == nil {
