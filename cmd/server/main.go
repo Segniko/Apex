@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/api/iterator"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -188,37 +189,68 @@ func getSourceContext(stackTrace string) map[string]string {
 	context := make(map[string]string)
 	lines := strings.Split(stackTrace, "\n")
 	
-	// Basic regex for file paths (e.g., /path/to/file.go:123 or C:\path\to\file.go:123)
-	// We'll just look for existing files mentioned in the trace
 	for _, line := range lines {
-		// Look for common go/ts/js patterns
 		if !strings.Contains(line, ".go") && !strings.Contains(line, ".ts") && !strings.Contains(line, ".js") {
 			continue
 		}
 
-		// Try to find a path-like string
 		parts := strings.Fields(line)
 		for _, part := range parts {
 			cleanPath := strings.Trim(part, "(),: ")
-			// If it's an absolute path and exists, read it
+			
+			// Try 1: Absolute path
 			if _, err := os.Stat(cleanPath); err == nil {
-				if _, ok := context[cleanPath]; !ok {
-					data, err := os.ReadFile(cleanPath)
-					if err == nil {
-						// Limit size to 2KB per file for prompt safety
-						if len(data) > 2048 {
-							data = data[:2048]
-						}
-						context[cleanPath] = string(data)
-					}
+				if readAndStore(cleanPath, context) {
+					continue
 				}
 			}
+
+			// Try 2: Relative to current directory (for files like pkg/ai/ai.go)
+			// Sometimes stack traces have paths like "pkg/ai/ai.go:45"
+			// Extract just the path part if it has a line number
+			pathOnly := cleanPath
+			if lastColon := strings.LastIndex(cleanPath, ":"); lastColon != -1 {
+				pathOnly = cleanPath[:lastColon]
+			}
+
+			if _, err := os.Stat(pathOnly); err == nil {
+				if readAndStore(pathOnly, context) {
+					continue
+				}
+			}
+
+			// Try 3: Just the filename in current directory or subdirs
+			// This is a bit expensive but good for demo
+			base := filepath.Base(pathOnly)
+			filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+				if err == nil && !info.IsDir() && info.Name() == base {
+					readAndStore(path, context)
+					return filepath.SkipDir // Found it, stop walking
+				}
+				return nil
+			})
 		}
-		if len(context) >= 3 { // Limit to 3 files max
+		if len(context) >= 3 {
 			break
 		}
 	}
 	return context
+}
+
+func readAndStore(path string, context map[string]string) bool {
+	if _, ok := context[path]; ok {
+		return true
+	}
+	data, err := os.ReadFile(path)
+	if err == nil {
+		content := string(data)
+		if len(content) > 2048 {
+			content = content[:2048]
+		}
+		context[path] = content
+		return true
+	}
+	return false
 }
 
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
@@ -403,7 +435,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		resp, err := iter.Next()
-		if err == io.EOF {
+		if err == iterator.Done {
 			break
 		}
 		if err != nil {
