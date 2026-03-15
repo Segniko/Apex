@@ -33,13 +33,48 @@ export function CrashCard({ report }: { report: CrashReport }) {
                 </div>
 
                 {/* Trace */}
-                <div className="bg-black/60 p-5 rounded border border-[#222] font-mono text-[11px] leading-relaxed text-[#FFB800]/80 overflow-x-auto max-h-[300px] mb-8">
+                <div className="bg-black/60 p-5 rounded border border-[#222] font-mono text-[11px] leading-relaxed text-[#FFB800]/80 overflow-x-auto max-h-[200px] mb-8">
                     {report.stack_trace.split('\n').map((line, i) => (
                         <div key={i} className="flex gap-4 hover:bg-[#FFB800]/5 py-0.5">
                             <span className="text-[#333] w-6 text-right select-none">{i + 1}</span>
                             <span className={line.startsWith('\t') ? 'text-[#FF4D00]' : ''}>{line}</span>
                         </div>
                     ))}
+                </div>
+
+                {/* Tactical Actions */}
+                <div className="flex flex-wrap gap-4 mb-8">
+                    <button 
+                        onClick={() => {
+                            const event = new CustomEvent('apex-chat-context', { 
+                                detail: { errorId: report.error_id, message: report.message } 
+                            });
+                            window.dispatchEvent(event);
+                        }}
+                        className="flex-1 bg-[#FFB800]/10 border border-[#FFB800]/30 text-[#FFB800] px-4 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-[#FFB800] hover:text-black transition-all flex items-center justify-center gap-2"
+                    >
+                        [ Chat about this Error ]
+                    </button>
+                    <button 
+                        onClick={(e) => {
+                            const btn = e.currentTarget;
+                            const isResolved = btn.getAttribute('data-resolved') === 'true';
+                            if (isResolved) {
+                                btn.setAttribute('data-resolved', 'false');
+                                btn.innerText = '[ MARK_RESOLVED ]';
+                                btn.classList.replace('border-[#00FF41]', 'border-[#FF4D00]/20');
+                                btn.classList.replace('text-[#00FF41]', 'text-[#FF4D00]');
+                            } else {
+                                btn.setAttribute('data-resolved', 'true');
+                                btn.innerText = '[ RESOLVED ]';
+                                btn.classList.replace('border-[#FF4D00]/20', 'border-[#00FF41]');
+                                btn.classList.replace('text-[#FF4D00]', 'text-[#00FF41]');
+                            }
+                        }}
+                        className="bg-[#111] border border-[#FF4D00]/20 text-[#FF4D00] px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:border-[#FF4D00] transition-all"
+                    >
+                        [ MARK_RESOLVED ]
+                    </button>
                 </div>
 
                 {/* AI Insight Panel */}

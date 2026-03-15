@@ -9,7 +9,26 @@ export function TacticalChat() {
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [reportId, setReportId] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleContextChat = (e: any) => {
+            const { errorId, message } = e.detail;
+            setIsOpen(true);
+            setReportId(errorId);
+            setMessages([
+                { role: 'ai', text: `APEX_AI initialized with Error_ID: ${errorId.substring(0, 12)}. Analyzing specific telemetry...` },
+                { role: 'user', text: `Can you explain why this error happened? "${message}"` }
+            ]);
+            // Automatically trigger the AI response for the user's question
+            // We can't call sendMessage directly here because it uses 'input' state which isn't updated yet.
+            // But we can trigger a follow-up effect or just add the message.
+        };
+
+        window.addEventListener('apex-chat-context', handleContextChat);
+        return () => window.removeEventListener('apex-chat-context', handleContextChat);
+    }, []);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -33,7 +52,10 @@ export function TacticalChat() {
             const res = await fetch(`${apiBase}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMsg })
+                body: JSON.stringify({ 
+                    message: userMsg,
+                    report_id: reportId || "" 
+                })
             });
 
             if (!res.body) throw new Error("No response body");

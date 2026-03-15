@@ -6,6 +6,28 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+function CopyKeyButton({ ingestKey }: { ingestKey: string }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(ingestKey);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <button
+            onClick={handleCopy}
+            className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 border transition-all ${copied
+                ? 'bg-[#00FF41] text-black border-[#00FF41]'
+                : 'text-[#FFB800] border-[#FFB800]/30 hover:bg-[#FFB800]/10'
+                }`}
+        >
+            {copied ? 'COPIED' : 'Copy_Key'}
+        </button>
+    );
+}
+
 export default function ProjectsHub() {
     const { data: session, status } = useSession();
     const [projects, setProjects] = useState<Project[]>([]);
@@ -110,6 +132,7 @@ export default function ProjectsHub() {
                                                 <span className="text-[9px] uppercase font-mono text-gray-500 flex items-center gap-2">
                                                     Ingest Key
                                                 </span>
+                                                <CopyKeyButton ingestKey={p.ingest_key} />
                                             </div>
                                             <code className="text-[10px] font-mono text-green-500/80 break-all select-all block p-2 bg-black border border-[#111]">
                                                 {p.ingest_key}
