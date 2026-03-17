@@ -41,5 +41,3 @@ yarn-error.log*
 next-env.d.ts
 
 verify_ingest.py
-
-full_documentation.md
