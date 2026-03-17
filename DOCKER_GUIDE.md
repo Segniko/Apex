@@ -41,8 +41,6 @@ To run the commands I gave you, you need **Docker Desktop**.
 
 ## 4. The Apex Docker Setup
 
-I've created a `docker-compose.yml` in your project. Here is what's inside:
-
 ```yaml
 version: '3.8'
 services:
@@ -67,3 +65,5 @@ When you run `docker compose up -d`, Docker will:
 - [Docker Curriculum (Beginner Friendly)](https://docker-curriculum.com/)
 - [Official Docker "Get Started" Guide](https://docs.docker.com/get-started/)
 - [Docker Compose Overview](https://docs.docker.com/compose/)
+
+Had to use AI on this one since I was a bit new on Docker, it wasn't hard but I asked it to show me the best way to do it and so even asked it to recommend me books. Thankfully now I am well equipped with full knowledge on it. If there is anyone reading this, don't just use AI for coding. Don't just ask and then ignore the rest. You need to read the books/documentation and understand the concepts and actually code it(even if not everything) let it be your assistant(you are the master). There is fun in learning new concepts in our field, that's what even makes it so joyful at times.  
