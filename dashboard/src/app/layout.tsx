@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 
 import { Providers } from "../components/Providers";
 import { TacticalChat } from "../components/TacticalChat";
+import { MobileBlocker } from "../components/MobileBlocker";
 
 export const metadata: Metadata = {
   title: "Apex Monitoring Engine",
@@ -31,6 +32,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <MobileBlocker />
           {children}
           <TacticalChat />
         </Providers>

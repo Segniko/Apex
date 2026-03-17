@@ -60,16 +60,61 @@
   .animate-diagonal {
     animation: slideDiagonal 10s ease-in-out infinite alternate;
   }
+
+  .bg-scanline {
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(0, 0, 0, 0.5) 50%
+    );
+    background-size: 100% 4px;
+    animation: scanline 10s linear infinite;
+  }
 }
 
 @keyframes slideDiagonal {
   0% {
-    transform: translateY(-15%);
+    transform: translateY(-15%) translateX(-5%);
   }
 
   100% {
-    transform: translateY(15%);
+    transform: translateY(15%) translateX(5%);
   }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 2s ease-in-out infinite;
+}
+
+.glitch-text {
+  text-shadow: 2px 0 #FF4D00, -2px 0 #00FF41;
+  animation: glitch 1s infinite linear alternate-reverse;
+}
+
+@keyframes glitch {
+  0% { text-shadow: 2px 0 #FF4D00, -2px 0 #00FF41; }
+  50% { text-shadow: -2px 0 #FF4D00, 2px 0 #00FF41; }
+  100% { text-shadow: 2px 0 #FF4D00, -2px 0 #00FF41; }
+}
+
+.scale-animate {
+  animation: scale-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes scale-up {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* Custom Scrollbar */
