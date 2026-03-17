@@ -4,7 +4,7 @@
 
 Apex is a high-performance crash monitoring and observability engine built for modern infrastructure. It captures, compresses, and syncs crash report "DNA" from your applications in real time, then uses AI-powered forensics to decode root causes and suggest fixes. Designed with a "Community First" philosophy, it brings enterprise-grade capabilities to every developer's terminal.
 
-**Live Demo:** [https://apex.vercel.app](https://apex.vercel.app)
+**Live Demo:** [https://apex-addis.vercel.app](https://apex-addis.vercel.app)
 
 ---
 
