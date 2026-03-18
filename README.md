@@ -8,6 +8,17 @@ Apex is a high-performance crash monitoring and observability engine built for m
 
 ---
 
+## Documentation Process
+
+- I started by writing the documentation manually myself outlining the architecture, key features.
+- Once I had a solid foundation I used Google's Code Wiki to generate additional structure, diagrams, and comprehensive overviews. I then reviewed everything refined the AI suggestions and merged the best parts into the final docs. Documentation process doesn't stop here. I will keep on updating it as I add more features and improve the existing ones.
+
+## Recommendation for others
+
+If you're documenting a project:
+
+- Write the core documentation yourself first, feed your manual version + codebase into Code Wiki and then refine the output. Fix any erros and keep only what you actually want or what is needed.
+
 ## Table of Contents
 
 - [Features](#features)
