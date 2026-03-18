@@ -2,7 +2,7 @@
 
 **Industrial-grade failure forensics. 100% Free. 100% Open Source.**
 
-Apex is a high-performance crash monitoring and observability engine built for modern infrastructure. It captures, compresses, and syncs crash report "DNA" from your applications in real time, then uses AI-powered forensics to decode root causes and suggest fixes. Designed with a "Community First" philosophy, it brings enterprise-grade capabilities to every developer's terminal.
+Apex is a high performance crash monitoring and observability engine built for modern infrastructure. It captures, compresses, and syncs crash report "DNA" from your applications in real time, then uses AI-powered forensics to decode root causes and suggest fixes. Designed with a "Community First" philosophy, it brings enterprise grade capabilities to every developer's terminal.
 
 **Live Demo:** [https://apex-addis.vercel.app](https://apex-addis.vercel.app)
 
@@ -64,17 +64,17 @@ If you're documenting a project:
 
 ## Features
 
-- **Redis-Buffered Ingest Pipeline** -- Crash reports are offloaded to a Redis stream, decoupling reception from storage for high throughput and zero data loss.
-- **AI-Powered Root-Cause Analysis** -- Every crash report is automatically analyzed by Google Gemini, providing structured forensic breakdowns including root cause, impact assessment, and tactical fixes.
-- **Real-Time AI Chat** -- An interactive chat interface (SSE-based streaming) lets developers ask follow-up questions about specific crash reports with full source-code context.
-- **Multi-Language Edge Agents** -- Lightweight agents for Go, Python, and Node.js that capture exceptions, collect device/system telemetry, compress payloads with Zstandard, and sync them to the receiver.
+- **Redis Buffered Ingest Pipeline** -- Crash reports are offloaded to a Redis stream, decoupling reception from storage for high throughput and zero data loss.
+- **AI Powered Root-Cause Analysis** -- Every crash report is automatically analyzed by Google Gemini, providing structured forensic breakdowns including root cause, impact assessment, and tactical fixes.
+- **Real Time AI Chat** -- An interactive chat interface (SSE based streaming) lets developers ask follow up questions about specific crash reports with full source-code context.
+- **Multi Language Edge Agents** -- Lightweight agents for Go, Python, and Node.js that capture exceptions, collect device/system telemetry, compress payloads with Zstandard, and sync them to the receiver.
 - **Encrypted Local Vault** -- An AES-256-GCM encrypted SQLite database on the agent side ensures crash data is stored securely before sync.
-- **Protocol Buffers Serialization** -- Crash reports use Protobuf for compact, schema-enforced serialization with JSON fallback for non-Go agents.
+- **Protocol Buffers Serialization** -- Crash reports use Protobuf for compact, schema enforced serialization with JSON fallback for non Go agents.
 - **CockroachDB Persistence** -- Production storage on CockroachDB for globally distributed, strongly consistent data with automatic failover.
 - **Prometheus + Grafana Monitoring** -- Built-in metrics exposure (`/metrics`) with pre-configured Prometheus scraping and Grafana dashboards.
 - **GitHub OAuth Authentication** -- The dashboard uses NextAuth.js with GitHub provider for secure user authentication and project isolation.
-- **Project-Based Data Isolation** -- Each project gets a unique ingest key, ensuring crash data is isolated per workspace.
-- **RAG-Enhanced AI Context** -- AI analysis pulls historical similar reports for retrieval-augmented context, improving forensic accuracy over time.
+- **Project Based Data Isolation** -- Each project gets a unique ingest key, ensuring crash data is isolated per workspace.
+- **RAG Enhanced AI Context** -- AI analysis pulls historical similar reports for retrieval-augmented context, improving forensic accuracy over time.
 - **Resilient Sync with Exponential Backoff** -- The Syphon module retries failed transmissions with exponential backoff and network-aware sync decisions.
 
 ---
@@ -173,7 +173,7 @@ If you're documenting a project:
 
 The fastest way to get started is to use the centralized Command Center:
 
-1. Visit [https://apex.vercel.app](https://apex.vercel.app)
+1. Visit [https://apex-addis.vercel.app](https://apex.vercel.app)
 2. Sign in with GitHub
 3. Create a project and copy your unique **Ingest Key**
 4. Drop an Edge Agent into your codebase (see [Agent Integration](#agent-integration))
