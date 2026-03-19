@@ -100,10 +100,6 @@ type startChatMsg struct {
 	message  string
 }
 
-type msgStartWorker struct {
-	msg startChatMsg
-}
-
 func initialModel() *model {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "APEX_FORENSICS_TERMINAL"
@@ -260,6 +256,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.aiResponse += string(msg)
 		m.updateViewport()
+		m.viewport.GotoBottom() // Automatically track the incoming AI stream.
 
 	case errorMsg:
 		m.err = msg
@@ -267,8 +264,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
+	var vpCmd tea.Cmd
+
 	m.list, cmd = m.list.Update(msg)
-	cmds = append(cmds, cmd)
+	m.viewport, vpCmd = m.viewport.Update(msg)
+
+	cmds = append(cmds, cmd, vpCmd)
 
 	return m, tea.Batch(cmds...)
 }
