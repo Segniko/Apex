@@ -74,7 +74,8 @@ type model struct {
 	list          list.Model
 	viewport      viewport.Model
 	reports       []ReportItem
-	selected      *ReportItem
+	selected      ReportItem
+	hasSelected   bool
 	loading       bool
 	err           error
 	chatMode      bool
@@ -102,7 +103,7 @@ type msgStartWorker struct {
 	msg startChatMsg
 }
 
-func initialModel() model {
+func initialModel() *model {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "APEX_FORENSICS_TERMINAL"
 	l.Styles.Title = titleStyle
@@ -111,7 +112,7 @@ func initialModel() model {
 	home, _ := os.UserHomeDir()
 	configPath := filepath.Join(home, ".apex_config.json")
 
-	m := model{
+	m := &model{
 		list:       l,
 		viewport:   viewport.New(0, 0),
 		configPath: configPath,
@@ -134,7 +135,7 @@ func initialModel() model {
 	return m
 }
 
-func (m model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	if m.showSetup {
 		return nil
 	}
@@ -143,7 +144,7 @@ func (m model) Init() tea.Cmd {
 	}
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -184,7 +185,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.chatInput = ""
 				return m, nil
 			case "enter":
-				if m.chatInput != "" && m.selected != nil {
+				if m.chatInput != "" && m.hasSelected {
 					m.aiResponse = "ANALYZING_TELEMETRY..."
 					// We pass the program pointer to the chat function for async updates
 					return m, tea.Batch(func() tea.Msg {
@@ -213,12 +214,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "enter":
 			if i, ok := m.list.SelectedItem().(ReportItem); ok {
-				m.selected = &i
+				m.selected = i
+				m.hasSelected = true
 				m.aiResponse = ""
 				m.updateViewport()
 			}
 		case "c":
-			if m.selected != nil {
+			if m.hasSelected {
 				m.chatMode = true
 				return m, nil
 			}
@@ -270,7 +272,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) updateViewport() {
-	if m.selected == nil {
+	if !m.hasSelected {
 		m.viewport.SetContent("SELECT A REPORT FROM THE LEFT TO ANALYZE.")
 		return
 	}
@@ -297,7 +299,7 @@ func (m *model) updateViewport() {
 	m.viewport.SetContent(content)
 }
 
-func (m model) View() string {
+func (m *model) View() string {
 	if m.showSetup {
 		return docStyle.Render(
 			lipgloss.JoinVertical(lipgloss.Left,
@@ -332,7 +334,7 @@ func (m model) View() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		headerStyle.Render(" APEX_TACTICAL_FORENSICS_UNIT // VERSION_1.0_TUI "),
+		headerStyle.Render(fmt.Sprintf(" APEX_TACTICAL_FORENSICS_UNIT // VERSION_1.0_TUI // DATA_FEED: %d_ITEMS ", len(m.reports))),
 		lipgloss.JoinHorizontal(lipgloss.Top, sidebar, detail),
 		help,
 	)

@@ -4,8 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 type SampleReport struct {
@@ -20,7 +25,19 @@ type SampleReport struct {
 
 func main() {
 	url := "http://localhost:8081/ingest"
+
+	home, _ := os.UserHomeDir()
+	configPath := filepath.Join(home, ".apex_config.json")
 	apiKey := "apex-demo-key-999"
+	if data, err := os.ReadFile(configPath); err == nil {
+		var cfg struct {
+			APIKey string `json:"api_key"`
+		}
+		json.Unmarshal(data, &cfg)
+		if cfg.APIKey != "" {
+			apiKey = cfg.APIKey
+		}
+	}
 
 	samples := []SampleReport{
 		{
@@ -56,24 +73,35 @@ func main() {
 
 	client := &http.Client{Timeout: 5 * time.Second}
 
-	for _, s := range samples {
-		data, _ := json.Marshal(s)
-		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(data))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+apiKey)
+	// Wrap in BatchReport structure
+	batch := map[string]interface{}{
+		"reports": samples,
+	}
 
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Printf("Failed to send %s: %v\n", s.ErrorID, err)
-			continue
-		}
-		defer resp.Body.Close()
+	payload, _ := json.Marshal(batch)
 
-		if resp.StatusCode == 202 || resp.StatusCode == 200 {
-			fmt.Printf("Synced Sample: %s\n", s.ErrorID)
-		} else {
-			fmt.Printf("Server returned %d for %s\n", resp.StatusCode, s.ErrorID)
-		}
+	// Compress with ZSTD (Tactical Requirement)
+	var buf bytes.Buffer
+	zw, _ := zstd.NewWriter(&buf)
+	zw.Write(payload)
+	zw.Close()
+
+	req, _ := http.NewRequest("POST", url, &buf)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Apex-API-Key", apiKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("FAILED_SYNC: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		fmt.Printf("SUCCESS: Simulation batch synced using Key: %s...\n", apiKey[:8])
+	} else {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("REJECTED: Server returned %d - %s\n", resp.StatusCode, string(body))
 	}
 
 	fmt.Println("\n Simulation Complete. Check your dashboard at http://localhost:3000/dashboard")

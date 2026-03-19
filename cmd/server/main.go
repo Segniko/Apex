@@ -82,7 +82,7 @@ func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Ser
 func (s *Server) warmUpFileCache() {
 	slog.Info("[APEX_SERVER] Warming up project file cache...")
 	start := time.Now()
-	
+
 	cache := make(map[string][]string)
 	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
@@ -94,12 +94,12 @@ func (s *Server) warmUpFileCache() {
 			}
 			return nil
 		}
-		
+
 		base := filepath.Base(path)
 		cache[base] = append(cache[base], path)
 		return nil
 	})
-	
+
 	s.fileCache = cache
 	slog.Info("[APEX_SERVER] File cache warmed up", "entries", len(cache), "duration", time.Since(start))
 }
@@ -220,7 +220,7 @@ func generateFingerprint(message, stackTrace string) string {
 func (s *Server) getSourceContext(stackTrace string) map[string]string {
 	context := make(map[string]string)
 	lines := strings.Split(stackTrace, "\n")
-	
+
 	for _, line := range lines {
 		if !strings.Contains(line, ".go") && !strings.Contains(line, ".ts") && !strings.Contains(line, ".js") {
 			continue
@@ -229,7 +229,7 @@ func (s *Server) getSourceContext(stackTrace string) map[string]string {
 		parts := strings.Fields(line)
 		for _, part := range parts {
 			cleanPath := strings.Trim(part, "(),: ")
-			
+
 			// Try 1: Exact or relative path check (fast)
 			if _, err := os.Stat(cleanPath); err == nil {
 				if s.readAndStore(cleanPath, context) {
@@ -334,9 +334,17 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 
 	// Offload to Redis Stream
 	ctx := context.Background()
-	slog.Info("Batch received, offloading to Redis", "count", len(batch.Reports))
+	slog.Info("Batch received", "count", len(batch.Reports), "persistent", s.isPersistent)
 	for _, report := range batch.Reports {
 		reportsReceived.Inc()
+
+		if !s.isPersistent {
+			// Direct Save in Memory Mode (Bypass Redis/Workers for quick local feedback)
+			s.store.SaveReport(report, projectID)
+			slog.Info("Report saved directly (Memory Mode)", "crash_id", report.ErrorId)
+			continue
+		}
+
 		data, _ := proto.Marshal(report)
 		err := s.rdb.XAdd(ctx, &redis.XAddArgs{
 			Stream: "apex_reports",
@@ -347,6 +355,8 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		}).Err()
 		if err != nil {
 			slog.Error("Failed to push to Redis", "error", err)
+			// Last resort: if Redis fails and we have a store, try saving directly
+			s.store.SaveReport(report, projectID)
 		}
 	}
 
@@ -378,10 +388,14 @@ func (s *Server) handleGetReportsJSON(w http.ResponseWriter, r *http.Request) {
 	projectID := r.URL.Query().Get("project_id")
 	if projectID == "" {
 		key := r.Header.Get("X-Apex-API-Key")
+		slog.Info("[APEX_DEBUG] TUI Request detected", "has_key", key != "")
 		if key != "" {
 			resolved, err := s.store.ValidateKey(key)
 			if err == nil && resolved != "" {
 				projectID = resolved
+				slog.Info("[APEX_DEBUG] Resolved project from key", "project_id", projectID)
+			} else {
+				slog.Warn("[APEX_DEBUG] Key validation failed or no project found", "error", err)
 			}
 		}
 	}
@@ -392,6 +406,7 @@ func (s *Server) handleGetReportsJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
+	slog.Info("[APEX_DEBUG] Reports fetched", "count", len(reports), "project_id", projectID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reports)
