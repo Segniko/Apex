@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -186,10 +187,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "enter":
 				if m.chatInput != "" && m.hasSelected {
-					m.aiResponse = "ANALYZING_TELEMETRY..."
-					// We pass the program pointer to the chat function for async updates
+					// Setup local state immediately before spawning the command
+					msgStr := m.chatInput
 					return m, tea.Batch(func() tea.Msg {
-						return startChatMsg{m.selected.ID, m.chatInput}
+						return startChatMsg{m.selected.ID, msgStr}
 					})
 				}
 			case "backspace":
@@ -244,8 +245,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetItems(items)
 
 	case startChatMsg:
-		m.aiResponse = ""
+		m.aiResponse = "ANALYZING_TELEMETRY..."
 		m.chatInput = ""
+		m.updateViewport() // Force the UI to show the 'ANALYZING' state immediately
 		// Start the async worker
 		return m, func() tea.Msg {
 			startChat(m.program, m.apiKey, msg.reportID, msg.message)
@@ -392,6 +394,12 @@ func startChat(p *tea.Program, apiKey, reportID, message string) {
 			return
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			p.Send(aiChunkMsg(fmt.Sprintf("ERROR_SIGNAL: HTTP %d - %s", resp.StatusCode, string(bodyBytes))))
+			return
+		}
 
 		// Consume SSE stream
 		scanner := bufio.NewScanner(resp.Body)

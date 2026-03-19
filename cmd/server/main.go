@@ -471,9 +471,14 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// Get context for the report if ID is provided
 	sourceContext := make(map[string]string)
 	if req.ReportID != "" {
-		reports, err := s.store.GetReports(1, req.ReportID)
-		if err == nil && len(reports) > 0 {
-			sourceContext = s.getSourceContext(reports[0].StackTrace)
+		reports, err := s.store.GetReports(100, "")
+		if err == nil {
+			for _, r := range reports {
+				if r.ErrorId == req.ReportID {
+					sourceContext = s.getSourceContext(r.StackTrace)
+					break
+				}
+			}
 		}
 	}
 
