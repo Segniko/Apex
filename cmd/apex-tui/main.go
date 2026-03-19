@@ -391,7 +391,7 @@ func startChat(p *tea.Program, apiKey, reportID, message string) {
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			p.Send(errorMsg(err))
+			p.Send(aiChunkMsg(fmt.Sprintf("ERROR_SIGNAL: SIGNAL_LOSS - %v", err)))
 			return
 		}
 		defer resp.Body.Close()
@@ -402,6 +402,21 @@ func startChat(p *tea.Program, apiKey, reportID, message string) {
 			return
 		}
 
+		// Handle SSE or JSON response
+		contentType := resp.Header.Get("Content-Type")
+
+		if strings.Contains(contentType, "application/json") {
+			var result struct {
+				Response string `json:"response"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&result); err == nil {
+				p.Send(aiChunkMsg(result.Response))
+			} else {
+				p.Send(aiChunkMsg("ERROR_SIGNAL: Failed to decode AI JSON response."))
+			}
+			return
+		}
+
 		// Consume SSE stream
 		scanner := bufio.NewScanner(resp.Body)
 		var receivedLines int
@@ -409,23 +424,29 @@ func startChat(p *tea.Program, apiKey, reportID, message string) {
 			line := scanner.Text()
 			receivedLines++
 
-			// Print exactly what is received from the server
-			p.Send(aiChunkMsg(fmt.Sprintf("[RAW] %s\n", line)))
-
 			if strings.HasPrefix(line, "data: ") {
 				content := strings.TrimPrefix(line, "data: ")
 				if content == "[DONE]" {
 					break
 				}
+				p.Send(aiChunkMsg(content))
+			} else if strings.HasPrefix(line, "{") {
+				// Try parsing as JSON even without 'data: ' prefix if the server is inconsistent
+				var result struct {
+					Response string `json:"response"`
+				}
+				if err := json.Unmarshal([]byte(line), &result); err == nil {
+					p.Send(aiChunkMsg(result.Response))
+				}
 			}
 		}
 
 		if receivedLines == 0 {
-			p.Send(aiChunkMsg("\n[RAW] ERROR_SIGNAL: Stream Closed with 0 Chunks. Valid Request, Empty AI Response."))
+			p.Send(aiChunkMsg("\nERROR_SIGNAL: Stream Closed with 0 Chunks. Valid Request, Empty AI Response."))
 		}
 
 		if err := scanner.Err(); err != nil {
-			p.Send(errorMsg(err))
+			p.Send(aiChunkMsg(fmt.Sprintf("\nERROR_SIGNAL: Stream Error - %v", err)))
 		}
 	}()
 }
