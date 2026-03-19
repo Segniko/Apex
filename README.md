@@ -41,6 +41,7 @@ If you're documenting a project:
   - [Go Agent](#go-agent)
   - [Python Agent](#python-agent)
   - [Node.js Agent](#nodejs-agent)
+- [Terminal & CLI Ingest](#terminal-cli-ingest)
 - [API Reference](#api-reference)
 - [Dashboard](#dashboard)
 - [Observability Stack](#observability-stack)
@@ -526,10 +527,55 @@ try {
 
 **Dependencies:** `uuid`, `fzstd`
 
-```bash
 cd agents/node
 npm install
 ```
+
+---
+
+## Terminal & CLI Ingest
+
+For manual testing or custom integrations, you can ingest crash reports directly from the terminal.
+
+### 1. Simple Ingest via cURL (JSON)
+The Apex Receiver can accept raw JSON batches if Protobuf is not available.
+
+```bash
+curl -X POST http://localhost:8081/ingest \
+  -H "X-Apex-API-Key: YOUR_PROJECT_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reports": [
+      {
+        "error_id": "test-uuid-123",
+        "message": "Manual Terminal Ingest Test",
+        "stack_trace": "main.go:45\n  error happened here",
+        "timestamp": '$(date +%s)',
+        "context": {
+          "os": "macos",
+          "arch": "arm64",
+          "network_type": "wifi"
+        }
+      }
+    ]
+  }'
+```
+
+### 2. Using the Simulation Tool
+Apex includes a built-in simulation tool to flood the system with realistic forensic data.
+
+```bash
+# From the project root
+go run cmd/simulate/main.go
+```
+
+### 3. Using the Apex TUI (Console Extension)
+The TUI provides a live "Tactical HUD" for viewing these reports.
+
+```bash
+go run cmd/apex-tui/main.go
+```
+*Tip: Once the TUI is open, use **Arrow Keys** to navigate and **Enter** to select a report. Press **'c'** to start an AI forensic session for that specific report.*
 
 ---
 
