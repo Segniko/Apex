@@ -422,11 +422,11 @@ A Redis-backed sliding window rate limiter that protects AI quota and prevents a
 ```go
 limiter := limiter.NewRateLimiter(redisClient)
 
-// Allow 100 requests per hour for this key
-allowed, err := limiter.Allow(ctx, "project123:analysis", 100, 1*time.Hour)
+// Allow 400 requests per hour for this key
+allowed, err := limiter.Allow(ctx, "project123:analysis", 400, 1*time.Hour)
 
 // Check remaining quota
-remaining, err := limiter.GetRemaining(ctx, "project123:analysis", 100)
+remaining, err := limiter.GetRemaining(ctx, "project123:analysis", 400)
 ```
 
 The limiter fails closed (denies) when Redis is unavailable to protect downstream AI resources.
