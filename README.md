@@ -2,7 +2,7 @@
 
 **Industrial-grade failure forensics. 100% Free. 100% Open Source.**
 
-Apex is a high-performance crash monitoring and observability engine built for modern infrastructure. It captures, compresses, and syncs crash report "DNA" from your applications in real time, then uses AI-powered forensics to decode root causes and suggest fixes. Designed with a "Community First" philosophy, it brings enterprise-grade capabilities to every developer's terminal.
+Apex is a high performance crash monitoring and observability engine built for modern infrastructure. It captures, compresses, and syncs crash report "DNA" from your applications in real time, then uses AI-powered forensics to decode root causes and suggest fixes. Designed with a "Community First" philosophy, it brings enterprise grade capabilities to every developer's terminal.
 
 **Live Demo:** [https://apex-addis.vercel.app](https://apex-addis.vercel.app)
 
@@ -64,17 +64,17 @@ If you're documenting a project:
 
 ## Features
 
-- **Redis-Buffered Ingest Pipeline** -- Crash reports are offloaded to a Redis stream, decoupling reception from storage for high throughput and zero data loss.
-- **AI-Powered Root-Cause Analysis** -- Every crash report is automatically analyzed by Google Gemini, providing structured forensic breakdowns including root cause, impact assessment, and tactical fixes.
-- **Real-Time AI Chat** -- An interactive chat interface (SSE-based streaming) lets developers ask follow-up questions about specific crash reports with full source-code context.
-- **Multi-Language Edge Agents** -- Lightweight agents for Go, Python, and Node.js that capture exceptions, collect device/system telemetry, compress payloads with Zstandard, and sync them to the receiver.
+- **Redis Buffered Ingest Pipeline** -- Crash reports are offloaded to a Redis stream decoupling reception from storage for high throughput and zero data loss.
+- **AI Powered Root-Cause Analysis** -- Every crash report is automatically analyzed by Gemini providing structured forensic breakdowns including root cause, impact assessment, and tactical fixes.
+- **Real Time AI Chat** -- An interactive chat interface (SSE based streaming) lets developers ask follow up questions about specific crash reports with full source code context.
+- **Multi Language Edge Agents** -- Lightweight agents for Go, Python, and Node.js that capture exceptions, collect device/system telemetry, compress payloads with Zstandard and sync them to the receiver.
 - **Encrypted Local Vault** -- An AES-256-GCM encrypted SQLite database on the agent side ensures crash data is stored securely before sync.
-- **Protocol Buffers Serialization** -- Crash reports use Protobuf for compact, schema-enforced serialization with JSON fallback for non-Go agents.
+- **Protocol Buffers Serialization** -- Crash reports use Protobuf for compact, schema enforced serialization with JSON fallback for non Go agents.
 - **CockroachDB Persistence** -- Production storage on CockroachDB for globally distributed, strongly consistent data with automatic failover.
 - **Prometheus + Grafana Monitoring** -- Built-in metrics exposure (`/metrics`) with pre-configured Prometheus scraping and Grafana dashboards.
 - **GitHub OAuth Authentication** -- The dashboard uses NextAuth.js with GitHub provider for secure user authentication and project isolation.
-- **Project-Based Data Isolation** -- Each project gets a unique ingest key, ensuring crash data is isolated per workspace.
-- **RAG-Enhanced AI Context** -- AI analysis pulls historical similar reports for retrieval-augmented context, improving forensic accuracy over time.
+- **Project Based Data Isolation** -- Each project gets a unique ingest key, ensuring crash data is isolated per workspace.
+- **RAG Enhanced AI Context** -- AI analysis pulls historical similar reports for retrieval-augmented context, improving forensic accuracy over time.
 - **Resilient Sync with Exponential Backoff** -- The Syphon module retries failed transmissions with exponential backoff and network-aware sync decisions.
 
 ---
@@ -134,7 +134,7 @@ If you're documenting a project:
 1. An Edge Agent captures a crash (panic, exception, error) along with device context (OS, architecture, memory, battery).
 2. The report is serialized via Protobuf (Go) or JSON (Python/Node.js), compressed with Zstandard, and transmitted to the Receiver.
 3. The Receiver validates the API key, decompresses and deserializes the batch, then pushes each report to a Redis stream.
-4. A background worker reads from the Redis stream, runs Gemini AI analysis (with caching and rate limiting), and persists the enriched report to CockroachDB.
+4. A background worker reads from the Redis stream, runs AI analysis (with caching and rate limiting), and persists the enriched report to CockroachDB.
 5. The Next.js dashboard polls the Receiver's REST API to display crash reports with AI insights and provides an interactive chat for deeper analysis.
 
 ---
@@ -165,7 +165,7 @@ If you're documenting a project:
 
 - **Go 1.25+** (for backend development)
 - **Node.js 20+** and **npm** (for dashboard development)
-- **Docker** and **Docker Compose** (for self-hosting)
+- **Docker** and **Docker Compose** (for self hosting)
 - A **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/) (optional, for AI features)
 - A **GitHub OAuth App** (optional, for dashboard authentication)
 
@@ -173,7 +173,7 @@ If you're documenting a project:
 
 The fastest way to get started is to use the centralized Command Center:
 
-1. Visit [https://apex.vercel.app](https://apex.vercel.app)
+1. Visit [https://apex-addis.vercel.app](https://apex-addis.vercel.app)
 2. Sign in with GitHub
 3. Create a project and copy your unique **Ingest Key**
 4. Drop an Edge Agent into your codebase (see [Agent Integration](#agent-integration))
@@ -364,7 +364,7 @@ Reports are batched into `BatchReport` messages for efficient transmission.
 The Vault is an AES-256-GCM encrypted SQLite database that stores crash reports locally on the agent side before they are synced to the receiver. This ensures:
 
 - **Offline resilience** -- Crashes are never lost even without network connectivity.
-- **Data security** -- All crash data is encrypted at rest with a 32-byte key.
+- **Data security** -- All crash data is encrypted at rest with a 32 byte key.
 - **Automatic cleanup** -- Successfully synced reports are pruned to prevent unbounded growth.
 
 ```go
@@ -547,7 +547,7 @@ The Receiver exposes the following HTTP endpoints (default port `8081`):
 - `X-Apex-API-Key` (required): Project ingest key
 - `Content-Type`: `application/x-protobuf` or `application/octet-stream`
 
-**Body:** Zstd-compressed Protobuf or JSON `BatchReport`
+**Body:** Zstd compressed Protobuf or JSON `BatchReport`
 
 **Response:** `202 Accepted` with count of reports received
 
@@ -598,7 +598,7 @@ The Receiver exposes the following HTTP endpoints (default port `8081`):
 }
 ```
 
-**Response:** Server-Sent Events (SSE) stream. Each event is `data: <text>\n\n`. Stream ends with `data: [DONE]\n\n`.
+**Response:** Server Sent Events (SSE) stream. Each event is `data: <text>\n\n`. Stream ends with `data: [DONE]\n\n`.
 
 ### Status & Metrics
 
@@ -640,7 +640,7 @@ The dashboard is a Next.js 16 application with a tactical/industrial design them
 
 ### Key Components
 
-- **CrashCard** -- Displays crash reports with telemetry grid (OS, architecture, memory, battery), syntax-highlighted stack traces, "Chat about this Error" action, and AI insight panel.
+- **CrashCard** -- Displays crash reports with telemetry grid (OS, architecture, memory, battery) syntax-highlighted stack traces, "Chat about this Error" action, and AI insight panel.
 - **TacticalChat** -- Floating AI chat widget with SSE streaming, code block rendering with diff syntax highlighting, and crash-report-aware context.
 - **UserButton** -- Displays authenticated user info with session termination.
 - **MobileBlocker** -- Restricts access on mobile devices (desktop-only application).
@@ -657,7 +657,7 @@ The dashboard uses NextAuth.js v5 with GitHub as the OAuth provider. Protected r
 
 ## Observability Stack
 
-Apex includes a pre-configured observability stack:
+Apex includes a pre configured observability stack:
 
 ### Prometheus
 
@@ -773,13 +773,13 @@ Apex is 100% open source. Contributions are welcome!
 
 Building Apex is just the beginning. I have several high-impact features planned to push the boundaries of observability:
 
-- **eBPF Zero-Touch Monitoring** -- I want to implement eBPF-based agents that can capture context at the kernel level without modifying a single line of application code. This would allow Apex to monitor any running process, providing deep system-level telemetry (syscall failures, memory faults, network drops) with zero instrumentation overhead.
+- **eBPF Zero Touch Monitoring** -- I want to implement eBPF-based agents that can capture context at the kernel level without modifying a single line of application code. This would allow Apex to monitor any running process, providing deep system-level telemetry (syscall failures, memory faults, network drops) with zero instrumentation overhead.
 
-- **Self-Healing Hooks** -- I plan to add "Action Hooks" that allow the AI to trigger specific recovery scripts (like restarting a service or draining a node) when it detects a known critical failure pattern. Instead of just reporting the crash, Apex would actively participate in recovery.
+- **Self Healing Hooks** -- I plan to add "Action Hooks" that allow the AI to trigger specific recovery scripts (like restarting a service or draining a node) when it detects a known critical failure pattern. Instead of just reporting the crash, Apex would actively participate in recovery.
 
 - **Predictive Analytics** -- By analyzing historical crash data with Gemini, I want to build a system that alerts me when it detects a "regression pattern" before a full system outage occurs. The goal is to move from reactive forensics to proactive failure prevention.
 
-- **Edge-AI Denoising** -- Moving smaller AI models directly into the Syphon to filter out noisy, low-signal errors before they even hit the receiver. This would reduce bandwidth, cut storage costs, and let the central AI focus on the crashes that actually matter.
+- **Edge AI Denoising** -- Moving smaller AI models directly into the Syphon to filter out noisy, low-signal errors before they even hit the receiver. This would reduce bandwidth, cut storage costs, and let the central AI focus on the crashes that actually matter.
 
 ---
 
@@ -793,7 +793,7 @@ I initialized the project with `go mod init github.com/apex/monitor` and adopted
 
 | Package | Responsibility |
 |---------|----------------|
-| `pkg/agent` | The panic sensor -- captures crashes, collects context, and coordinates sync |
+| `pkg/agent` | The panic sensor -- captures crashes, collects context and coordinates sync |
 | `pkg/vault` | My encrypted local storage -- AES-256-GCM over SQLite for crash data at rest |
 | `pkg/syphon` | My compression and sync logic -- Zstd batching with exponential backoff |
 | `pkg/receiver` | The ingest engine -- decompression, deserialization, and routing |
@@ -802,11 +802,11 @@ I initialized the project with `go mod init github.com/apex/monitor` and adopted
 | `pkg/limiter` | Quota enforcement -- Redis-backed sliding window rate limiting |
 | `proto/` | Where I keep my Protobuf definitions and generated Go code |
 
-This layout made it straightforward to develop, test, and reason about each component independently.
+This layout made it straightforward to develop, test and reason about each component independently.
 
 ### Why I Chose Protobuf
 
-I found that Protocol Buffers produce significantly smaller payloads than JSON, which proved vital when I tested it in high-cost data regions. A typical crash report serialized as JSON weighs ~800 bytes; the same report in Protobuf is ~350 bytes. When you're ingesting thousands of reports per minute across paid network links, that 56% reduction adds up fast. Protobuf also gives me strict schema enforcement -- if a field type changes, the compiler catches it before runtime does.
+I found that Protocol Buffers produce significantly smaller payloads than JSON which proved vital when I tested it in high cost data regions. A typical crash report serialized as JSON weighs ~800 bytes the same report in Protobuf is ~350 bytes. When you're ingesting thousands of reports per minute across paid network links that 56% reduction adds up fast. Protobuf also gives me strict schema enforcement -- if a field type changes, the compiler catches it before runtime does.
 
 ### Compiler Chain & Dependencies
 
@@ -829,39 +829,39 @@ The generated `proto/apex.pb.go` file is checked into the repository so that con
 
 Building Apex forced me to go deep on several core Go concepts:
 
-- **`defer` + `recover` for robust panic handling** -- The entire agent crash-capture system is built on deferred recovery. I learned to use `recover()` inside a deferred function to intercept panics, extract the panic value, capture a stack trace with `runtime.Stack()`, and then re-raise the panic so the application's normal crash behavior is preserved.
+- **`defer` + `recover` for robust panic handling** -- The entire agent crash capture system is built on deferred recovery. I learned to use `recover()` inside a deferred function to intercept panics, extract the panic value, capture a stack trace with `runtime.Stack()` and then re-raise the panic so the application's normal crash behavior is preserved.
 
 - **Pointers (`*` and `&`) for memory efficiency** -- Crash reports and device contexts are passed as pointers throughout the pipeline to avoid unnecessary copying. The Protobuf-generated code uses pointer receivers extensively, and I learned to work with this idiom naturally.
 
-- **The global module cache and interfaces for testability** -- I designed the `storage.Provider` interface specifically so I could swap between CockroachDB in production and an in-memory store for development and testing, without changing a single line of business logic.
+- **The global module cache and interfaces for testability** -- I designed the `storage.Provider` interface specifically so I could swap between CockroachDB in production and an in memory store for development and testing, without changing a single line of business logic.
 
 - **Goroutines and channels for the background sync engine** -- The agent's sync loop runs as a goroutine with a `time.Ticker`. I used channels and `select` statements to coordinate the sync timer with graceful shutdown signals.
 
-- **`log/slog` for structured, tactical logging** -- Every log statement in the receiver uses structured fields (`slog.String`, `slog.Int`, `slog.Error`) so that logs are machine-parseable and can be piped into any observability stack.
+- **`log/slog` for structured, tactical logging** -- Every log statement in the receiver uses structured fields (`slog.String`, `slog.Int`, `slog.Error`) so that logs are machine parseable and can be piped into any observability stack.
 
 ### Advanced Features & Encounters
 
 Some of the more challenging technical work I did:
 
-- **AES-GCM encryption in the Vault** -- I implemented AES-256-GCM authenticated encryption to ensure crash data at rest is secure. Each report is encrypted with a unique random nonce to prevent nonce-reuse attacks. The encryption key must be exactly 32 bytes, which I enforce at initialization time.
+- **AES-GCM encryption in the Vault** -- I implemented AES-256-GCM authenticated encryption to ensure crash data at rest is secure. Each report is encrypted with a unique random nonce to prevent nonce-reuse attacks. The encryption key must be exactly 32 bytes which I enforce at initialization time.
 
 - **Docker networking wall** -- I hit a connectivity wall early on with Docker. Containers couldn't reach each other using `localhost`. I fixed this by switching from `localhost` to `127.0.0.1` for my database and Redis connection strings in development, and using Docker service names (`cockroach`, `redis`) in the Compose network.
 
-- **Deep memory diagnostics** -- I added `runtime.ReadMemStats` to provide deep memory diagnostics in every crash report. The agent captures total allocated memory, free memory, and GC statistics at the exact moment of the crash, giving me a precise snapshot of the system state.
+- **Deep memory diagnostics** -- I added `runtime.ReadMemStats` to provide deep memory diagnostics in every crash report. The agent captures total allocated memory, free memory and GC statistics at the exact moment of the crash giving me a precise snapshot of the system state.
 
-- **Cyber-black dashboard** -- I built the Next.js dashboard with a strict industrial "cyber-black" theme using Tailwind CSS v4. The design system is built around amber (`#FFB800`), near-black backgrounds (`#080808`), and green (`#00FF41`) accents -- explicitly zero blue or pink anywhere in the interface.
+- **Cyber-black dashboard** -- I built the Next.js dashboard with a strict industrial "cyber black" theme using Tailwind CSS v4. The design system is built around amber (`#FFB800`), near black backgrounds (`#080808`), and green (`#00FF41`) accents -- explicitly zero blue or pink anywhere in the interface.
 
 ### Operational Excellence
 
 The final phase of the project was building a complete observability stack around the receiver:
 
-1. **Prometheus instrumentation** -- I integrated the `prometheus/client_golang` library into the Go receiver, registering counters for `apex_reports_received_total` and `apex_ingest_errors_total`, plus a histogram for `apex_ingest_duration_seconds` to track processing latency.
+1. **Prometheus instrumentation** -- I integrated the `prometheus/client_golang` library into the Go receiver registering counters for `apex_reports_received_total` and `apex_ingest_errors_total`, plus a histogram for `apex_ingest_duration_seconds` to track processing latency.
 
 2. **`/metrics` endpoint** -- I exposed a dedicated `/metrics` endpoint that Prometheus scrapes every 15 seconds. This gives me real-time visibility into ingest throughput, error rates, and latency distributions.
 
-3. **Unified Docker Compose** -- I created a single `docker-compose.yml` that brings up my entire forensics suite with one command: CockroachDB, Redis, the receiver, the dashboard, Prometheus, and Grafana -- six services, zero manual configuration.
+3. **Unified Docker Compose** -- I created a single `docker-compose.yml` that brings up my entire forensics suite with one command: CockroachDB, Redis, the receiver, the dashboard, Prometheus and Grafana -- six services, zero manual configuration.
 
-4. **Grafana dashboard** -- I configured a pre-provisioned Grafana dashboard at `deploy/grafana/dashboards/apex_dashboard.json` that visualizes all my Prometheus metrics with auto-refreshing panels. It provisions automatically on first boot via Grafana's YAML provisioning system.
+4. **Grafana dashboard** -- I configured a pre provisioned Grafana dashboard at `deploy/grafana/dashboards/apex_dashboard.json` that visualizes all my Prometheus metrics with auto-refreshing panels. It provisions automatically on first boot via Grafana's YAML provisioning system.
 
 ---
 
