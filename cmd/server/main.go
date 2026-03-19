@@ -376,6 +376,16 @@ func (s *Server) handleGetReportsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	projectID := r.URL.Query().Get("project_id")
+	if projectID == "" {
+		key := r.Header.Get("X-Apex-API-Key")
+		if key != "" {
+			resolved, err := s.store.ValidateKey(key)
+			if err == nil && resolved != "" {
+				projectID = resolved
+			}
+		}
+	}
+
 	reports, err := s.store.GetReports(50, projectID)
 	if err != nil {
 		slog.Error("Failed to fetch reports", "error", err)
