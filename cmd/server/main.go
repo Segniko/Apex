@@ -386,7 +386,7 @@ func (s *Server) handleGetReportsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	projectID := r.URL.Query().Get("project_id")
-	
+
 	// If the TUI connects using an API Key instead of a query parameter
 	if projectID == "" {
 		key := r.Header.Get("X-Apex-API-Key")
@@ -399,13 +399,6 @@ func (s *Server) handleGetReportsJSON(w http.ResponseWriter, r *http.Request) {
 				slog.Warn("[APEX_DEBUG] Key validation failed or no project found", "error", err)
 			}
 		}
-	}
-
-	if projectID == "" {
-		slog.Warn("[APEX_DEBUG] Rejecting request: No associated project found")
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]*apex.CrashReport{})
-		return
 	}
 
 	reports, err := s.store.GetReports(50, projectID)

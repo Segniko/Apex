@@ -403,16 +403,24 @@ func startChat(p *tea.Program, apiKey, reportID, message string) {
 
 		// Consume SSE stream
 		scanner := bufio.NewScanner(resp.Body)
+		var receivedLines int
 		for scanner.Scan() {
 			line := scanner.Text()
+			receivedLines++
+
+			// Print exactly what is received from the server
+			p.Send(aiChunkMsg(fmt.Sprintf("[RAW] %s\n", line)))
+
 			if strings.HasPrefix(line, "data: ") {
 				content := strings.TrimPrefix(line, "data: ")
 				if content == "[DONE]" {
 					break
 				}
-				// Send chunk to the UI
-				p.Send(aiChunkMsg(content))
 			}
+		}
+
+		if receivedLines == 0 {
+			p.Send(aiChunkMsg("\n[RAW] ERROR_SIGNAL: Stream Closed with 0 Chunks. Valid Request, Empty AI Response."))
 		}
 
 		if err := scanner.Err(); err != nil {
