@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	tacticalai "github.com/apex/monitor/pkg/ai"
@@ -53,6 +54,8 @@ type Server struct {
 	ai           *tacticalai.TacticalAI
 	limiter      *limiter.RateLimiter
 	isPersistent bool
+	fileCache    map[string][]string
+	cacheOnce    sync.Once
 }
 
 func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Server {
@@ -64,12 +67,41 @@ func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Ser
 		ai:           tacticalai.NewTacticalAI(geminiKey),
 		limiter:      limiter.NewRateLimiter(rdb),
 		isPersistent: false, // Will be set in main
+		fileCache:    make(map[string][]string),
 	}
+
+	// Warm up the file cache in the background to avoid blocking startup
+	go s.warmUpFileCache()
 
 	// Start 1 worker to handle database ingestion from Redis
 	go s.worker(0)
 
 	return s
+}
+
+func (s *Server) warmUpFileCache() {
+	slog.Info("[APEX_SERVER] Warming up project file cache...")
+	start := time.Now()
+	
+	cache := make(map[string][]string)
+	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			// Skip huge/irrelevant directories during general indexing
+			if info != nil && info.IsDir() {
+				if info.Name() == "node_modules" || info.Name() == ".next" || info.Name() == ".git" {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		
+		base := filepath.Base(path)
+		cache[base] = append(cache[base], path)
+		return nil
+	})
+	
+	s.fileCache = cache
+	slog.Info("[APEX_SERVER] File cache warmed up", "entries", len(cache), "duration", time.Since(start))
 }
 
 func (s *Server) worker(id int) {
@@ -142,7 +174,7 @@ func (s *Server) worker(id int) {
 						slog.Info("Generating new AI insight", "worker_id", id, "fingerprint", fingerprint)
 
 						// 1. Get Repo Context (Source Code)
-						sourceContext := getSourceContext(report.StackTrace)
+						sourceContext := s.getSourceContext(report.StackTrace)
 
 						// 2. Get RAG Context (Historical Similarity)
 						similar, _ := s.store.GetSimilarReports(report.Message, 3, projectID)
@@ -185,7 +217,7 @@ func generateFingerprint(message, stackTrace string) string {
 }
 
 // getSourceContext attempts to extract file paths from a stack trace and read the source code.
-func getSourceContext(stackTrace string) map[string]string {
+func (s *Server) getSourceContext(stackTrace string) map[string]string {
 	context := make(map[string]string)
 	lines := strings.Split(stackTrace, "\n")
 	
@@ -198,37 +230,34 @@ func getSourceContext(stackTrace string) map[string]string {
 		for _, part := range parts {
 			cleanPath := strings.Trim(part, "(),: ")
 			
-			// Try 1: Absolute path
+			// Try 1: Exact or relative path check (fast)
 			if _, err := os.Stat(cleanPath); err == nil {
-				if readAndStore(cleanPath, context) {
+				if s.readAndStore(cleanPath, context) {
 					continue
 				}
 			}
 
-			// Try 2: Relative to current directory (for files like pkg/ai/ai.go)
-			// Sometimes stack traces have paths like "pkg/ai/ai.go:45"
-			// Extract just the path part if it has a line number
+			// Try 2: Handle paths with line numbers (e.g., "pkg/ai/ai.go:45")
 			pathOnly := cleanPath
 			if lastColon := strings.LastIndex(cleanPath, ":"); lastColon != -1 {
 				pathOnly = cleanPath[:lastColon]
 			}
 
 			if _, err := os.Stat(pathOnly); err == nil {
-				if readAndStore(pathOnly, context) {
+				if s.readAndStore(pathOnly, context) {
 					continue
 				}
 			}
 
-			// Try 3: Just the filename in current directory or subdirs
-			// This is a bit expensive but good for demo
+			// Try 3: Use the pre-warmed file cache (very fast)
 			base := filepath.Base(pathOnly)
-			filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-				if err == nil && !info.IsDir() && info.Name() == base {
-					readAndStore(path, context)
-					return filepath.SkipDir // Found it, stop walking
+			if paths, ok := s.fileCache[base]; ok {
+				for _, p := range paths {
+					if s.readAndStore(p, context) {
+						break // Found a readable version of this file
+					}
 				}
-				return nil
-			})
+			}
 		}
 		if len(context) >= 3 {
 			break
@@ -237,7 +266,7 @@ func getSourceContext(stackTrace string) map[string]string {
 	return context
 }
 
-func readAndStore(path string, context map[string]string) bool {
+func (s *Server) readAndStore(path string, context map[string]string) bool {
 	if _, ok := context[path]; ok {
 		return true
 	}
@@ -419,7 +448,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	if req.ReportID != "" {
 		reports, err := s.store.GetReports(1, req.ReportID)
 		if err == nil && len(reports) > 0 {
-			sourceContext = getSourceContext(reports[0].StackTrace)
+			sourceContext = s.getSourceContext(reports[0].StackTrace)
 		}
 	}
 
