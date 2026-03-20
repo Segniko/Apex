@@ -29,6 +29,7 @@ If you're documenting a project:
   - [Cloud-Hosted Quickstart](#cloud-hosted-quickstart)
   - [Self-Hosting with Docker](#self-hosting-with-docker)
   - [Running Locally (Development)](#running-locally-development)
+  - [Manual Terminal Ingest](#manual-terminal-ingest)
 - [Project Structure](#project-structure)
 - [Core Concepts](#core-concepts)
   - [Crash Report DNA](#crash-report-dna)
@@ -234,6 +235,44 @@ npm run dev
 The dashboard will be available at **http://localhost:3000** and connects to the receiver at **http://localhost:8081** by default (configurable via `NEXT_PUBLIC_API_URL`).
 
 **Windows users** can use the provided `run.bat` script to launch all components at once.
+
+### Manual Terminal Ingest
+
+For manual testing or custom integrations, you can ingest crash reports directly from the terminal.
+
+```bash
+# Example: Simple Ingest via cURL (JSON)
+curl -X POST http://localhost:8081/ingest \
+  -H "X-Apex-API-Key: YOUR_PROJECT_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reports": [
+      {
+        "error_id": "test-uuid-123",
+        "message": "Manual Terminal Ingest Test",
+        "stack_trace": "main.go:45\n  error happened here",
+        "timestamp": '$(date +%s)',
+        "context": {
+          "os": "macos",
+          "arch": "arm64",
+          "network_type": "wifi"
+        }
+      }
+    ]
+  }'
+```
+
+**Simulation & Development Tools:**
+
+```bash
+# Run the built-in simulation tool to flood the system with reports
+go run cmd/simulate/main.go
+
+# Launch the Tactical HUD (TUI) for real-time forensics
+go run cmd/apex-tui/main.go
+```
+
+*Tip: In the TUI, use **Arrow Keys** to navigate and **'c'** to start an AI forensics session.*
 
 ---
 
