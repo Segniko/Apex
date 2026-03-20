@@ -172,7 +172,7 @@ If you're documenting a project:
 - A **GitHub OAuth App** (optional, for dashboard authentication)
 - **Python 3** (for unified onboarding)
 
-### 🚀 Quick Onboarding (Mac, Linux, Windows)
+### Quick Onboarding (Mac, Linux, Windows)
 
 For the simplest setup, run the unified onboarding command in your project repository:
 
