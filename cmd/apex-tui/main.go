@@ -138,23 +138,23 @@ func initialModel() *model {
 	}
 
 	// Use NEXT_PUBLIC_API_URL for consistency with the web dashboard
-	if content, err := os.ReadFile(".env"); err == nil {
-		scanner := bufio.NewScanner(bytes.NewReader(content))
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "NEXT_PUBLIC_API_URL=") {
-				m.apiBase = strings.TrimPrefix(line, "NEXT_PUBLIC_API_URL=")
-				break
+	envFiles := []string{"dashboard/.env.local", ".env"}
+	found := false
+	for _, envFile := range envFiles {
+		if content, err := os.ReadFile(envFile); err == nil {
+			scanner := bufio.NewScanner(bytes.NewReader(content))
+			for scanner.Scan() {
+				line := scanner.Text()
+				if strings.HasPrefix(line, "NEXT_PUBLIC_API_URL=") {
+					m.apiBase = strings.TrimPrefix(line, "NEXT_PUBLIC_API_URL=")
+					found = true
+					break
+				}
 			}
 		}
-	}
-
-	// Only if .env is missing or doesn't have the key
-	if m.apiBase == "" {
-		m.apiBase = os.Getenv("APEX_API_URL")
-	}
-	if m.apiBase == "" {
-		m.apiBase = "http://localhost:8081"
+		if found {
+			break
+		}
 	}
 
 	return m
@@ -174,6 +174,18 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Global keys (work in both modes)
+		switch msg.String() {
+		case "ctrl+c":
+			return m, tea.Quit
+		case "pgup", "ctrl+u":
+			m.viewport.LineUp(6)
+			return m, nil
+		case "pgdown", "ctrl+d":
+			m.viewport.LineDown(6)
+			return m, nil
+		}
+
 		if m.showSetup {
 			switch msg.String() {
 			case "ctrl+c":
@@ -230,7 +242,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "q":
 			return m, tea.Quit
 		case "r":
 			m.loading = true
@@ -315,6 +327,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.updateViewport()
 		m.viewport.GotoBottom()
+		return m, nil
 
 	case errorMsg:
 		m.err = msg
@@ -366,7 +379,8 @@ func (m *model) updateViewport() {
 		chatContent.WriteString(hazardStyle.Render("PREVIOUS_INSIGHT:\n") + m.selected.AIInsight + "\n")
 	}
 
-	m.viewport.SetContent(chatContent.String())
+	wrapped := lipgloss.NewStyle().Width(m.viewport.Width - 2).Render(chatContent.String())
+	m.viewport.SetContent(wrapped)
 }
 
 func (m *model) View() string {
@@ -492,6 +506,7 @@ func startChat(p *tea.Program, apiBase, apiKey, reportID, message string) {
 				if content == "[DONE]" {
 					break
 				}
+				receivedLines++
 				p.Send(aiChunkMsg(content))
 			} else if strings.HasPrefix(line, "{") {
 				// Try parsing as JSON even without 'data: ' prefix if the server is inconsistent
