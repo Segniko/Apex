@@ -8,11 +8,18 @@ then
     exit 1
 fi
 
-# Download the core script if not present
-if [ ! -f "apex-onboard.py" ]; then
-    echo "📡 Fetching onboarding engine..."
+# 1. Check for local script first (in current dir or scripts/)
+if [ -f "apex-onboard.py" ]; then
+    python3 apex-onboard.py
+elif [ -f "scripts/apex-onboard.py" ]; then
+    python3 scripts/apex-onboard.py
+else
+    echo "📡 Onboarding engine not found locally. Fetching..."
     curl -sSL https://raw.githubusercontent.com/Segniko/Apex/main/scripts/apex-onboard.py -o apex-onboard.py
+    if [ $? -eq 0 ]; then
+        python3 apex-onboard.py
+    else
+        echo "❌ Failed to fetch onboarding engine. Check your connection or repo visibility."
+        exit 1
+    fi
 fi
-
-# Run the onboarding script
-python3 apex-onboard.py

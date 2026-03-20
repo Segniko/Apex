@@ -17,7 +17,7 @@ def clear_screen():
 
 def print_header():
     print("\033[1;33m" + "="*60)
-    print("   🚀 APEX_MONITORING: TACTICAL_ONBOARDING_INITIATED")
+    print("APEX_MONITORING: TACTICAL_ONBOARDING_INITIATED")
     print("="*60 + "\033[0m\n")
 
 def get_ingest_key():
@@ -34,7 +34,7 @@ def get_ingest_key():
     if key:
         with open(CONFIG_PATH, 'w') as f:
             json.dump({"api_key": key}, f)
-        print(f"✅ Key saved to {CONFIG_PATH}")
+        print(f"Key saved to {CONFIG_PATH}")
     return key
 
 def detect_language():
@@ -61,7 +61,7 @@ def setup_agent(lang, key):
     }
 
     if lang == "go":
-        print("💡 For Go projects, add the agent to your \033[1;36mgo.mod\033[0m:")
+        print("For Go projects, add the agent to your \033[1;36mgo.mod\033[0m:")
         print("\033[1;37m" + "   go get github.com/Segniko/Apex/pkg/agent" + "\033[0m")
         return
 
@@ -69,7 +69,7 @@ def setup_agent(lang, key):
     remote_url = GITHUB_RAW_BASE + agent_files[lang]
     output_path = output_files[lang]
     
-    print(f"📡 Fetching agent DNA from \033[1;34m{remote_url}\033[0m...")
+    print(f"Fetching agent DNA from \033[1;34m{remote_url}\033[0m...")
     
     try:
         import urllib.request
@@ -82,45 +82,56 @@ def setup_agent(lang, key):
         return
 
     if lang == "python":
-        print("\n📦 \033[1;33mINSTALL DEPENDENCIES:\033[0m")
+        print("\n \033[1;33mINSTALL DEPENDENCIES:\033[0m")
         print("   pip install requests zstandard")
-        print("\n💡 \033[1;37mUSAGE:\033[0m")
+        print("\n \033[1;37mUSAGE:\033[0m")
         print(f"""
 from apex_agent import ApexAgent
 agent = ApexAgent(ingest_url="https://apex-addis.vercel.app/api/ingest", api_key="{key}")
 """)
     elif lang == "node":
-        print("\n📦 \033[1;33mINSTALL DEPENDENCIES:\033[0m")
+        print("\n \033[1;33mINSTALL DEPENDENCIES:\033[0m")
         print("   npm install uuid fzstd")
-        print("\n💡 \033[1;37mUSAGE:\033[0m")
+        print("\n \033[1;37mUSAGE:\033[0m")
         print(f"""
 const {{ ApexAgent }} = require('./apexAgent');
 const agent = new ApexAgent("https://apex-addis.vercel.app/api/ingest", "{key}");
 """)
 
 def launch_hud():
-    print("\n🖥  Launching \033[1;33mAPEX_HUD\033[0m...")
+    print("\n Launching \033[1;33mAPEX_HUD\033[0m...")
     
     # 1. Open Web Dashboard
-    print("🌐 Opening Web Dashboard: \033[1;34mhttps://apex-addis.vercel.app/dashboard\033[0m")
+    print("Opening Web Dashboard: \033[1;34mhttps://apex-addis.vercel.app/dashboard\033[0m")
     webbrowser.open("https://apex-addis.vercel.app/dashboard")
 
     # 2. Try to launch TUI
-    print("⌨️  Attempting to launch Terminal HUD...")
+    print("Attempting to launch Terminal HUD...")
     
     if shutil.which("go"):
-        # Run via go
-        print("🚀 Go detected. Running TUI...")
-        cmd = ["go", "run", "github.com/Segniko/Apex/cmd/apex-tui@latest"]
+        print("Go detected. Running TUI...")
+        
+        # Check for local TUI first (if running from Apex repo)
+        local_tui = Path("cmd/apex-tui/main.go")
+        if local_tui.exists():
+            tui_cmd = f"go run {local_tui}"
+        else:
+            tui_cmd = "go run github.com/Segniko/Apex/cmd/apex-tui@latest"
+
         try:
-            subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0)
+            if os.name == "nt":
+                # On Windows, 'start' opens a new persistent console window
+                subprocess.Popen(f"start {tui_cmd}", shell=True)
+            else:
+                # On Unix/Mac, we just run it (user might need to run in a new tab manually if preferred)
+                subprocess.Popen(tui_cmd.split())
         except Exception as e:
             print(f"⚠️  Could not start TUI automatically: {e}")
-            print("💡 Manual launch: go run github.com/Segniko/Apex/cmd/apex-tui@latest")
+            print(f"Manual launch: {tui_cmd}")
     elif shutil.which("docker"):
         # Run via docker
-        print("🐳 Go not detected. Using Docker for TUI...")
-        print("💡 Run: docker run -it --rm -v ~/.apex_config.json:/root/.apex_config.json segniko/apex-tui")
+        print("Go not detected. Using Docker for TUI...")
+        print("Run: docker run -it --rm -v ~/.apex_config.json:/root/.apex_config.json segniko/apex-tui")
     else:
         print("❌ Neither Go nor Docker detected. Please visit the Web Dashboard.")
 
