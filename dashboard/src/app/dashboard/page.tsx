@@ -2,17 +2,26 @@
 
 import { CrashCard } from '@/components/CrashCard';
 import { UserButton } from '@/components/UserButton';
-import { CrashReport, fetchReports } from '@/lib/api';
+import { OnboardingGuide } from '@/components/OnboardingGuide';
+import { CrashReport, fetchReports, fetchProjects, Project } from '@/lib/api';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 export default function Dashboard() {
+    const { data: session } = useSession();
     const [reports, setReports] = useState<CrashReport[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
 
     const loadData = async () => {
         const data = await fetchReports();
         setReports(data);
+        
+        if (session?.user?.email && projects.length === 0) {
+            const userProjects = await fetchProjects(session.user.email);
+            setProjects(userProjects);
+        }
         setLoading(false);
     };
 
@@ -70,9 +79,12 @@ export default function Dashboard() {
                             <div className="grid gap-8">
                                 {reports.map(r => <CrashCard key={r.error_id} report={r} />)}
                             </div>
+                        ) : projects.length > 0 ? (
+                            <OnboardingGuide project={projects[0]} />
                         ) : (
                             <div className="py-32 text-center border-2 border-dashed border-[#222] rounded-xl opacity-40">
-                                <h2 className="text-xl font-black text-white italic tracking-widest uppercase">No Breaches Detected</h2>
+                                <h2 className="text-xl font-black text-white italic tracking-widest uppercase">No Projects Detected</h2>
+                                <p className="text-[10px] mt-2">Initialize your first project on rendered server.</p>
                             </div>
                         )}
                     </div>

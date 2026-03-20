@@ -30,6 +30,7 @@ If you're documenting a project:
   - [Self-Hosting with Docker](#self-hosting-with-docker)
   - [Running Locally (Development)](#running-locally-development)
   - [Manual Terminal Ingest](#manual-terminal-ingest)
+  - [Tactical HUD (Zero-Install/Docker)](#tactical-hud-zero-installdocker)
 - [Project Structure](#project-structure)
 - [Core Concepts](#core-concepts)
   - [Crash Report DNA](#crash-report-dna)
@@ -273,6 +274,20 @@ go run cmd/apex-tui/main.go
 ```
 
 *Tip: In the TUI, use **Arrow Keys** to navigate and **'c'** to start an AI forensics session.*
+
+### Tactical HUD (Zero-Install/Docker)
+
+If you don't have Go installed, you can launch the Tactical HUD instantly via Docker. 
+
+```bash
+# 1. Build the lightweight HUD container
+docker build -t apex-tui -f Dockerfile.tui .
+
+# 2. Launch with persistent config (retains your API Key)
+docker run -it --rm \
+  -v ~/.apex_config.json:/root/.apex_config.json \
+  apex-tui
+```
 
 ---
 
