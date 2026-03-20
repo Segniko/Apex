@@ -170,6 +170,26 @@ If you're documenting a project:
 - **Docker** and **Docker Compose** (for self hosting)
 - A **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/) (optional, for AI features)
 - A **GitHub OAuth App** (optional, for dashboard authentication)
+- **Python 3** (for unified onboarding)
+
+### 🚀 Quick Onboarding (Mac, Linux, Windows)
+
+For the simplest setup, run the unified onboarding command in your project repository:
+
+**Mac / Linux (Bash):**
+```bash
+curl -sSL https://raw.githubusercontent.com/Segniko/Apex/main/onboard.sh | bash
+```
+
+**Windows (CMD):**
+```cmd
+curl -sSL https://raw.githubusercontent.com/Segniko/Apex/main/onboard.bat -o onboard.bat && onboard.bat
+```
+
+This single command will:
+1.  **Configure** your Ingest Key and Project Identity.
+2.  **Inject** the appropriate Edge Agent (Go, Python, or Node.js) into your repo.
+3.  **Launch** the AI Forensics HUD (Web Dashboard + Terminal TUI).
 
 ### Cloud-Hosted Quickstart
 

@@ -261,6 +261,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.chatMode = true
 				return m, nil
 			}
+		case "e":
+			m.apiKey = ""
+			m.setupInput = ""
+			m.showSetup = true
+			return m, nil
 		}
 
 	case tea.WindowSizeMsg:
@@ -416,7 +421,7 @@ func (m *model) View() string {
 		),
 	)
 
-	help := infoStyle.Render("\n  [↑/↓]: Scroll List | [Enter]: Select | [c]: Chat | [r]: Refresh | [q]: Quit")
+	help := infoStyle.Render("\n  [↑/↓]:Scroll List | [Enter]:Select | [c]:Chat | [e]:Reset Key | [r]:Refresh | [q]:Quit")
 	if m.chatMode {
 		help = titleStyle.Render(" CHAT_MODE ") + " Next Query: " + m.chatInput + "█" + infoStyle.Render("  [Enter]: Post | [Esc]: Back")
 	}
