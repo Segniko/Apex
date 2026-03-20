@@ -41,7 +41,7 @@ If you're documenting a project:
   - [Go Agent](#go-agent)
   - [Python Agent](#python-agent)
   - [Node.js Agent](#nodejs-agent)
-- [Terminal & CLI Ingest](#terminal-&-cli-ingest)
+- [Terminal & CLI Ingest](#terminal--cli-ingest)
 - [API Reference](#api-reference)
 - [Dashboard](#dashboard)
 - [Observability Stack](#observability-stack)
