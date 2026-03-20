@@ -29,8 +29,8 @@ def get_ingest_key():
         except:
             pass
     
-    print("🔑 No API Key detected. Visit \033[1;34mhttps://apex-addis.vercel.app\033[0m to get one.")
-    key = input("👉 Enter your INGEST_KEY: ").strip()
+    print("No API Key detected. Visit \033[1;34mhttps://apex-addis.vercel.app\033[0m to get one.")
+    key = input("Enter your INGEST_KEY: ").strip()
     if key:
         with open(CONFIG_PATH, 'w') as f:
             json.dump({"api_key": key}, f)
@@ -76,9 +76,9 @@ def setup_agent(lang, key):
         with urllib.request.urlopen(remote_url) as response:
             with open(output_path, 'wb') as out_file:
                 out_file.write(response.read())
-        print(f"✅ Created \033[1;36m{output_path}\033[0m in your current directory.")
+        print(f"Created \033[1;36m{output_path}\033[0m in your current directory.")
     except Exception as e:
-        print(f"❌ Failed to fetch agent: {e}")
+        print(f"Failed to fetch agent: {e}")
         return
 
     if lang == "python":
@@ -121,19 +121,20 @@ def launch_hud():
         try:
             if os.name == "nt":
                 # On Windows, 'start' opens a new persistent console window
-                subprocess.Popen(f"start {tui_cmd}", shell=True)
+                full_cmd = f'start "APEX_TUI" cmd /k "{tui_cmd}"'
+                subprocess.Popen(full_cmd, shell=True)
             else:
-                # On Unix/Mac, we just run it (user might need to run in a new tab manually if preferred)
+                # On Unix/Mac
                 subprocess.Popen(tui_cmd.split())
         except Exception as e:
-            print(f"⚠️  Could not start TUI automatically: {e}")
+            print(f"⚠️ Could not start TUI automatically: {e}")
             print(f"Manual launch: {tui_cmd}")
     elif shutil.which("docker"):
         # Run via docker
         print("Go not detected. Using Docker for TUI...")
         print("Run: docker run -it --rm -v ~/.apex_config.json:/root/.apex_config.json segniko/apex-tui")
     else:
-        print("❌ Neither Go nor Docker detected. Please visit the Web Dashboard.")
+        print("Neither Go nor Docker detected. Please visit the Web Dashboard.")
 
 def main():
     clear_screen()
@@ -141,16 +142,16 @@ def main():
     
     key = get_ingest_key()
     if not key:
-        print("❌ Onboarding aborted: No API Key.")
+        print("Onboarding aborted: No API Key.")
         return
 
     lang = detect_language()
     if lang != "unknown":
         setup_agent(lang, key)
     else:
-        print("❓ Could not automatically detect project language. Skipping agent setup.")
+        print("Could not automatically detect project language. Skipping agent setup.")
 
-    input("\n🎯 Setup complete. Press \033[1;33m[ENTER]\033[0m to launch the HUD...")
+    input("\n Setup complete. Press \033[1;33m[ENTER]\033[0m to launch the HUD...")
     launch_hud()
 
 if __name__ == "__main__":
