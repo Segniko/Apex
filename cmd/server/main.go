@@ -164,8 +164,8 @@ func (s *Server) worker(id int) {
 					slog.Info("Using cached AI insight", "worker_id", id, "fingerprint", fingerprint)
 					report.AiInsight = insight
 				} else {
-					// Apply Rate Limit: 400 insights per hour per project
-					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 400, 1*time.Hour)
+					// Apply Rate Limit: 100 insights per hour per project
+					allowed, _ := s.limiter.Allow(ctx, projectID+":analysis", 100, 1*time.Hour)
 
 					if !allowed {
 						slog.Warn("AI Analysis rate limit exceeded", "project_id", projectID)
