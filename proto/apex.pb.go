@@ -123,6 +123,8 @@ type CrashReport struct {
 	Timestamp     int64                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Context       *DeviceContext         `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
 	AiInsight     string                 `protobuf:"bytes,6,opt,name=ai_insight,json=aiInsight,proto3" json:"ai_insight,omitempty"`
+	Resolved      bool                   `protobuf:"varint,7,opt,name=resolved,proto3" json:"resolved,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -195,6 +197,20 @@ func (x *CrashReport) GetContext() *DeviceContext {
 func (x *CrashReport) GetAiInsight() string {
 	if x != nil {
 		return x.AiInsight
+	}
+	return ""
+}
+
+func (x *CrashReport) GetResolved() bool {
+	if x != nil {
+		return x.Resolved
+	}
+	return false
+}
+
+func (x *CrashReport) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
 	}
 	return ""
 }

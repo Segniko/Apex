@@ -24,4 +24,6 @@ type Provider interface {
 	GetProjects(userID string) ([]*Project, error)
 	ValidateKey(key string) (string, error)
 	GetSimilarReports(message string, limit int, projectID string) ([]*apex.CrashReport, error)
+	ResolveReport(id string, resolved bool) error
+	DeleteProject(id string) error
 }

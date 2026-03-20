@@ -596,17 +596,65 @@ func (s *Server) handleGetProjects(w http.ResponseWriter, r *http.Request) {
 		userID = "anonymous"
 	}
 
-	slog.Info("[APEX_DEBUG] Fetching projects for identity", "user_id", userID)
 	projects, err := s.store.GetProjects(userID)
 	if err != nil {
 		slog.Error("Failed to fetch projects", "error", err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
-	slog.Info("[APEX_DEBUG] Projects found for identity", "user_id", userID, "count", len(projects))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(projects)
+}
+
+func (s *Server) handleResolveReport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "Missing report ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Resolved bool `json:"resolved"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.store.ResolveReport(id, req.Resolved); err != nil {
+		slog.Error("Failed to resolve report", "error", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleDeleteProject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "Missing project ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.store.DeleteProject(id); err != nil {
+		slog.Error("Failed to delete project", "error", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -720,6 +768,8 @@ func main() {
 	http.HandleFunc("/api/chat", corsMiddleware(srv.handleChat))
 	http.HandleFunc("/api/projects", corsMiddleware(srv.handleGetProjects))
 	http.HandleFunc("/api/projects/create", corsMiddleware(srv.handleCreateProject))
+	http.HandleFunc("/api/projects/delete", corsMiddleware(srv.handleDeleteProject))
+	http.HandleFunc("/api/reports/resolve", corsMiddleware(srv.handleResolveReport))
 	http.HandleFunc("/api/status", corsMiddleware(srv.handleStatus))
 	http.Handle("/metrics", promhttp.Handler())
 
@@ -735,7 +785,7 @@ func main() {
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Apex-API-Key")
 
 		if r.Method == http.MethodOptions {

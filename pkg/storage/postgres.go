@@ -58,8 +58,11 @@ func (s *Store) Initialize() error {
 		return err
 	}
 
-	// 2. Ensure project_id column exists (Manual Migration)
+	// 2. Ensure project_id and resolved columns exist (Manual Migration)
 	if _, err := s.db.Exec("ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS project_id UUID"); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec("ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS resolved BOOLEAN DEFAULT FALSE"); err != nil {
 		return err
 	}
 
@@ -78,8 +81,8 @@ func (s *Store) Initialize() error {
 
 func (s *Store) SaveReport(r *apex.CrashReport, projectID string) error {
 	query := `
-	INSERT INTO crash_reports (id, project_id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, ai_insight, created_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, to_timestamp($11))
+	INSERT INTO crash_reports (id, project_id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, ai_insight, resolved, created_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, to_timestamp($12))
 	`
 	_, err := s.db.Exec(query,
 		r.ErrorId,
@@ -92,6 +95,7 @@ func (s *Store) SaveReport(r *apex.CrashReport, projectID string) error {
 		r.Context.FreeMemory,
 		r.Context.BatteryLevel,
 		r.AiInsight,
+		r.Resolved,
 		r.Timestamp,
 	)
 	return err
@@ -119,7 +123,7 @@ func (s *Store) GetDB() *sql.DB {
 func (s *Store) GetSimilarReports(message string, limit int, projectID string) ([]*apex.CrashReport, error) {
 	// Simple text similarity using ILIKE and prefix matching for RAG context
 	query := `
-	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), EXTRACT(EPOCH FROM created_at)::BIGINT
+	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), resolved, project_id::text, EXTRACT(EPOCH FROM created_at)::BIGINT
 	FROM crash_reports 
 	WHERE project_id::text = $2 AND (message ILIKE $3 OR stack_trace ILIKE $3)
 	ORDER BY created_at DESC 
@@ -153,6 +157,8 @@ func (s *Store) GetSimilarReports(message string, limit int, projectID string) (
 			&r.Context.FreeMemory,
 			&r.Context.BatteryLevel,
 			&r.AiInsight,
+			&r.Resolved,
+			&r.ProjectId,
 			&timestamp,
 		)
 		if err != nil {

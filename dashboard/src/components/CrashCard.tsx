@@ -1,10 +1,12 @@
-import { CrashReport } from '@/lib/api';
+import { CrashReport, resolveReport } from '@/lib/api';
+import { useState } from 'react';
 
 export function CrashCard({ report }: { report: CrashReport }) {
+    const [isResolved, setIsResolved] = useState(report.resolved);
     const date = new Date(report.timestamp * 1000).toLocaleString();
 
     return (
-        <div className="industrial-card rounded-lg overflow-hidden border-l-4 border-l-[#FF4D00]">
+        <div className={`industrial-card rounded-lg overflow-hidden border-l-4 transition-all ${isResolved ? 'border-l-[#00FF41] opacity-60' : 'border-l-[#FF4D00]'}`}>
             {/* Hazard Header */}
             <div className="flex items-center justify-between px-5 py-2 bg-[#1a1a1a] border-b border-[#222]">
                 <div className="flex items-center gap-2">
@@ -56,24 +58,18 @@ export function CrashCard({ report }: { report: CrashReport }) {
                         [ Chat about this Error ]
                     </button>
                     <button 
-                        onClick={(e) => {
-                            const btn = e.currentTarget;
-                            const isResolved = btn.getAttribute('data-resolved') === 'true';
-                            if (isResolved) {
-                                btn.setAttribute('data-resolved', 'false');
-                                btn.innerText = '[ MARK_RESOLVED ]';
-                                btn.classList.replace('border-[#00FF41]', 'border-[#FF4D00]/20');
-                                btn.classList.replace('text-[#00FF41]', 'text-[#FF4D00]');
-                            } else {
-                                btn.setAttribute('data-resolved', 'true');
-                                btn.innerText = '[ RESOLVED ]';
-                                btn.classList.replace('border-[#FF4D00]/20', 'border-[#00FF41]');
-                                btn.classList.replace('text-[#FF4D00]', 'text-[#00FF41]');
-                            }
+                        onClick={async () => {
+                            const newStatus = !isResolved;
+                            setIsResolved(newStatus);
+                            await resolveReport(report.error_id, newStatus);
                         }}
-                        className="bg-[#111] border border-[#FF4D00]/20 text-[#FF4D00] px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:border-[#FF4D00] transition-all"
+                        className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all border ${
+                            isResolved 
+                                ? 'bg-[#00FF41]/10 border-[#00FF41] text-[#00FF41]' 
+                                : 'bg-[#111] border-[#FF4D00]/20 text-[#FF4D00] hover:border-[#FF4D00]'
+                        }`}
                     >
-                        [ MARK_RESOLVED ]
+                        {isResolved ? '[ RESOLVED ]' : '[ MARK_RESOLVED ]'}
                     </button>
                 </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@/components/UserButton';
-import { createProject, fetchProjects, fetchStatus, Project } from '@/lib/api';
+import { createProject, deleteProject, fetchProjects, fetchStatus, Project } from '@/lib/api';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -73,6 +73,15 @@ export default function ProjectsHub() {
         setIsCreating(false);
     };
 
+    const handleDelete = async (projectId: string) => {
+        if (!confirm("TERMINATE_PROJECT: This will permanently purge all telemetry and the ingest key. Continue?")) return;
+        
+        const ok = await deleteProject(projectId);
+        if (ok) {
+            setProjects(projects.filter(p => p.id !== projectId));
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#080808] text-white selection:bg-[#FFB800] selection:text-black font-sans">
             {/* Top Header */}
@@ -137,6 +146,15 @@ export default function ProjectsHub() {
                                             <code className="text-[10px] font-mono text-green-500/80 break-all select-all block p-2 bg-black border border-[#111]">
                                                 {p.ingest_key}
                                             </code>
+                                        </div>
+
+                                        <div className="mt-8 flex justify-end pt-6 border-t border-[#222]">
+                                            <button
+                                                onClick={() => handleDelete(p.id)}
+                                                className="text-[9px] font-black text-red-500/40 hover:text-red-500 uppercase tracking-widest border border-red-500/20 hover:border-red-500/60 px-4 py-2 transition-all italic"
+                                            >
+                                                [ Terminate_Project ]
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

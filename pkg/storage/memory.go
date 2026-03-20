@@ -93,8 +93,7 @@ func (m *MemoryStore) GetSimilarReports(message string, limit int, projectID str
 	// Very simple prefix/containment match for MemoryStore
 	for i := len(m.reports) - 1; i >= 0; i-- {
 		r := m.reports[i]
-		if (projectID == "" || m.reportProject[r.ErrorId] == projectID) && 
-		   (len(r.Message) > 5 && message[:5] == r.Message[:5]) {
+		if (projectID == "" || r.ProjectId == projectID) && r.Message == message {
 			similar = append(similar, r)
 		}
 		if len(similar) >= limit {
@@ -102,4 +101,40 @@ func (m *MemoryStore) GetSimilarReports(message string, limit int, projectID str
 		}
 	}
 	return similar, nil
+}
+
+func (m *MemoryStore) ResolveReport(id string, resolved bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, r := range m.reports {
+		if r.ErrorId == id {
+			r.Resolved = resolved
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *MemoryStore) DeleteProject(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// 1. Delete the project
+	for i, p := range m.projects {
+		if p.ID == id {
+			m.projects = append(m.projects[:i], m.projects[i+1:]...)
+			break
+		}
+	}
+
+	// 2. Delete associated reports
+	var remaining []*apex.CrashReport
+	for _, r := range m.reports {
+		if r.ProjectId != id {
+			remaining = append(remaining, r)
+		}
+	}
+	m.reports = remaining
+
+	return nil
 }

@@ -8,7 +8,7 @@ import (
 
 func (s *Store) GetReports(limit int, projectID string) ([]*apex.CrashReport, error) {
 	query := `
-	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), EXTRACT(EPOCH FROM created_at)::BIGINT
+	SELECT id, message, stack_trace, os, arch, total_memory, free_memory, battery_level, COALESCE(ai_insight, ''), resolved, project_id::text, EXTRACT(EPOCH FROM created_at)::BIGINT
 	FROM crash_reports 
 	WHERE ($2 = '' OR project_id::text = $2)
 	ORDER BY created_at DESC 
@@ -34,6 +34,8 @@ func (s *Store) GetReports(limit int, projectID string) ([]*apex.CrashReport, er
 			&r.Context.FreeMemory,
 			&r.Context.BatteryLevel,
 			&r.AiInsight,
+			&r.Resolved,
+			&r.ProjectId,
 			&timestamp,
 		)
 		if err != nil {
@@ -69,7 +71,6 @@ func (s *Store) GetProjects(userID string) ([]*Project, error) {
 	}
 	return projects, nil
 }
-
 func (s *Store) ValidateKey(key string) (string, error) {
 	var projectID string
 	query := "SELECT id FROM projects WHERE ingest_key = $1"
@@ -78,4 +79,27 @@ func (s *Store) ValidateKey(key string) (string, error) {
 		return "", nil
 	}
 	return projectID, err
+}
+
+func (s *Store) ResolveReport(id string, resolved bool) error {
+	_, err := s.db.Exec("UPDATE crash_reports SET resolved = $1 WHERE id = $2", resolved, id)
+	return err
+}
+
+func (s *Store) DeleteProject(id string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	// Delete reports first
+	if _, err := tx.Exec("DELETE FROM crash_reports WHERE project_id = $1", id); err != nil {
+		tx.Rollback()
+		return err
+	}
+	// Delete project
+	if _, err := tx.Exec("DELETE FROM projects WHERE id = $1", id); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }

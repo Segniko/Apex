@@ -13,6 +13,8 @@ export interface CrashReport {
     timestamp: number;
     context: DeviceContext;
     ai_insight: string;
+    resolved: boolean;
+    project_id: string;
 }
 
 export interface Project {
@@ -85,5 +87,31 @@ export async function fetchStatus(): Promise<{ persistent: boolean }> {
     } catch (err) {
         console.error("[APEX] Status Check Exception:", err);
         return { persistent: false };
+    }
+}
+
+export async function resolveReport(reportId: string, resolved: boolean): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/reports/resolve?id=${reportId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resolved }),
+        });
+        return res.ok;
+    } catch (err) {
+        console.error("Failed to resolve report:", err);
+        return false;
+    }
+}
+
+export async function deleteProject(projectId: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/projects/delete?id=${projectId}`, {
+            method: 'DELETE',
+        });
+        return res.ok;
+    } catch (err) {
+        console.error("Failed to delete project:", err);
+        return false;
     }
 }
