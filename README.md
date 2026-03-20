@@ -8,6 +8,15 @@ Apex is a high performance crash monitoring and observability engine built for m
 
 ---
 
+## Preview
+
+### Apex Dashboard
+<img width="1363" height="599" alt="image" src="https://github.com/user-attachments/assets/640d7f0e-949f-40b0-8ca1-5a56f4899708" />
+
+### Apex Terminal HUD
+<img width="1365" height="624" alt="image" src="https://github.com/user-attachments/assets/67060b1e-fcef-4ee9-b3e1-8d88521f0678" />
+
+
 ## Documentation Process
 
 - I started by writing the documentation manually myself outlining the architecture, key features.
@@ -839,7 +848,10 @@ Building Apex is just the beginning. I have several high-impact features planned
 
 - **Predictive Analytics** -- By analyzing historical crash data with Gemini, I want to build a system that alerts me when it detects a "regression pattern" before a full system outage occurs. The goal is to move from reactive forensics to proactive failure prevention.
 
-- **Edge AI Denoising** -- Moving smaller AI models directly into the Syphon to filter out noisy, low-signal errors before they even hit the receiver. This would reduce bandwidth, cut storage costs, and let the central AI focus on the crashes that actually matter.
+- **Edge AI Denoising** -- Moving smaller AI models directly into the Syphon to filter out noisy, low signal errors before they even hit the receiver. This would reduce bandwidth, cut storage costs, and let the central AI focus on the crashes that actually matter.
+  
+- **Mobile Command Center** -- I want to build a companion mobile app (React Native or Flutter) that gives developers real time crash alerts with push notifications, a quick glance severity dashboard and the ability to trigger AI forensics sessions on the go. The goal is to close the gap between "crash happened" and "developer knows about it" to seconds not minutes.
+
 
 ---
 
