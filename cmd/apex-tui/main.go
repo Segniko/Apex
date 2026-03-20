@@ -63,6 +63,11 @@ type ReportItem struct {
 	AIInsight  string `json:"ai_insight"`
 }
 
+type Message struct {
+	Role    string // "user" or "ai"
+	Content string
+}
+
 func (i ReportItem) Title() string { return i.Msg }
 func (i ReportItem) Description() string {
 	return fmt.Sprintf("ID: %s... | OS: %s", i.ID[:8], i.Context.OS)
@@ -73,7 +78,8 @@ func (i ReportItem) FilterValue() string { return i.Msg }
 
 type model struct {
 	list          list.Model
-	viewport      viewport.Model
+	viewport      viewport.Model // Chat History
+	infoViewport  viewport.Model // Selected Error Details/Stacktrace
 	reports       []ReportItem
 	selected      ReportItem
 	hasSelected   bool
@@ -81,7 +87,7 @@ type model struct {
 	err           error
 	chatMode      bool
 	chatInput     string
-	aiResponse    string
+	messages      []Message
 	width, height int
 	program       *tea.Program
 
@@ -110,10 +116,11 @@ func initialModel() *model {
 	configPath := filepath.Join(home, ".apex_config.json")
 
 	m := &model{
-		list:       l,
-		viewport:   viewport.New(0, 0),
-		configPath: configPath,
-		loading:    true,
+		list:         l,
+		viewport:     viewport.New(0, 0),
+		infoViewport: viewport.New(0, 0),
+		configPath:   configPath,
+		loading:      true,
 	}
 
 	// Check for local config
@@ -213,7 +220,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if i, ok := m.list.SelectedItem().(ReportItem); ok {
 				m.selected = i
 				m.hasSelected = true
-				m.aiResponse = ""
+				m.messages = nil
 				m.updateViewport()
 			}
 		case "c":
@@ -226,9 +233,34 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		h, v := docStyle.GetFrameSize()
-		m.list.SetSize(35, msg.Height-v-4)
-		m.viewport.Width = msg.Width - 40 - h
-		m.viewport.Height = msg.Height - v - 6
+
+		// Layout: Top Row (Errors + Info) | Bottom Row (Chat)
+		// Total usable height: msg.Height - v - 6
+		usableHeight := msg.Height - v - 8
+		if usableHeight < 10 {
+			usableHeight = 10
+		}
+
+		topHeight := usableHeight / 3
+		if topHeight < 5 {
+			topHeight = 5
+		}
+		chatHeight := usableHeight - topHeight
+		if chatHeight < 5 {
+			chatHeight = 5
+		}
+
+		m.list.SetSize(35, topHeight-1)
+		
+		infoWidth := msg.Width - 40 - h
+		if infoWidth < 10 {
+			infoWidth = 10
+		}
+		m.infoViewport.Width = infoWidth
+		m.infoViewport.Height = topHeight - 1
+
+		m.viewport.Width = msg.Width - h
+		m.viewport.Height = chatHeight
 		m.updateViewport()
 
 	case reportsMsg:
@@ -241,22 +273,27 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetItems(items)
 
 	case startChatMsg:
-		m.aiResponse = "ANALYZING_TELEMETRY..."
+		m.messages = append(m.messages, Message{Role: "user", Content: msg.message})
+		m.messages = append(m.messages, Message{Role: "ai", Content: "ANALYZING_TELEMETRY..."})
 		m.chatInput = ""
-		m.updateViewport() // Force the UI to show the 'ANALYZING' state immediately
-		// Start the async worker
+		m.updateViewport()
 		return m, func() tea.Msg {
 			startChat(m.program, m.apiKey, msg.reportID, msg.message)
 			return nil
 		}
 
 	case aiChunkMsg:
-		if m.aiResponse == "ANALYZING_TELEMETRY..." {
-			m.aiResponse = ""
+		if len(m.messages) > 0 {
+			last := &m.messages[len(m.messages)-1]
+			if last.Role == "ai" {
+				if last.Content == "ANALYZING_TELEMETRY..." {
+					last.Content = ""
+				}
+				last.Content += string(msg)
+			}
 		}
-		m.aiResponse += string(msg)
 		m.updateViewport()
-		m.viewport.GotoBottom() // Automatically track the incoming AI stream.
+		m.viewport.GotoBottom()
 
 	case errorMsg:
 		m.err = msg
@@ -265,41 +302,50 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	var vpCmd tea.Cmd
+	var infoCmd tea.Cmd
 
 	m.list, cmd = m.list.Update(msg)
 	m.viewport, vpCmd = m.viewport.Update(msg)
+	m.infoViewport, infoCmd = m.infoViewport.Update(msg)
 
-	cmds = append(cmds, cmd, vpCmd)
+	cmds = append(cmds, cmd, vpCmd, infoCmd)
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m *model) updateViewport() {
 	if !m.hasSelected {
-		m.viewport.SetContent("SELECT A REPORT FROM THE LEFT TO ANALYZE.")
+		m.infoViewport.SetContent("SELECT A REPORT.")
+		m.viewport.SetContent("CHAT_OFFLINE")
 		return
 	}
 
-	content := fmt.Sprintf(
-		"%s\n\n%s %s\n%s %s\n\n%s\n%s\n\n%s\n%s",
+	// Update Info Viewport (Top Right)
+	info := fmt.Sprintf(
+		"%s\n%s %s\n%s %s\n%s\n%s\n\n%s\n%s",
 		hazardStyle.Render("=== TACTICAL_REPORT_DNA ==="),
 		hazardStyle.Render("ID:       "), m.selected.ID,
-		hazardStyle.Render("TIMESTAMP:"), time.Unix(m.selected.Timestamp, 0).Format(time.RFC1123),
-		hazardStyle.Render("ERROR_MESSAGE:"),
-		m.selected.Msg,
-		hazardStyle.Render("STACK_TRACE:"),
-		m.selected.StackTrace,
+		hazardStyle.Render("TIME:     "), time.Unix(m.selected.Timestamp, 0).Format(time.Kitchen),
+		hazardStyle.Render("ERROR:    "), m.selected.Msg,
+		hazardStyle.Render("TRACE:    "), m.selected.StackTrace,
 	)
+	m.infoViewport.SetContent(info)
 
-	if m.selected.AIInsight != "" {
-		content += fmt.Sprintf("\n\n%s\n%s", hazardStyle.Render("AI_FORENSIC_INSIGHT:"), m.selected.AIInsight)
+	// Update Chat Viewport (Bottom)
+	var chatContent strings.Builder
+	for _, msg := range m.messages {
+		if msg.Role == "user" {
+			chatContent.WriteString(hazardStyle.Render("USER_QUERY: ") + msg.Content + "\n\n")
+		} else {
+			chatContent.WriteString(hazardStyle.Render("AI_RESPONSE:\n") + msg.Content + "\n\n")
+		}
 	}
 
-	if m.aiResponse != "" {
-		content += fmt.Sprintf("\n\n%s\n%s", hazardStyle.Render("AI_CHAT_STREAM:"), m.aiResponse)
+	if len(m.messages) == 0 && m.selected.AIInsight != "" {
+		chatContent.WriteString(hazardStyle.Render("PREVIOUS_INSIGHT:\n") + m.selected.AIInsight + "\n")
 	}
 
-	m.viewport.SetContent(content)
+	m.viewport.SetContent(chatContent.String())
 }
 
 func (m *model) View() string {
@@ -324,21 +370,26 @@ func (m *model) View() string {
 	}
 
 	sidebar := listStyle.Render(m.list.View())
+	info := detailStyle.Render(m.infoViewport.View())
 
-	detail := detailStyle.Render(
+	topRow := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, info)
+
+	chat := docStyle.Render(
 		lipgloss.JoinVertical(lipgloss.Left,
+			hazardStyle.Render("=== OPERATIONAL_CHAT_HISTORY ==="),
 			m.viewport.View(),
 		),
 	)
 
-	help := infoStyle.Render("\n  [↑/↓]: Scroll List | [Enter]: View Details | [c]: Chat with AI | [r]: Refresh | [q]: Quit")
+	help := infoStyle.Render("\n  [↑/↓]: Scroll List | [Enter]: Select | [c]: Chat | [r]: Refresh | [q]: Quit")
 	if m.chatMode {
-		help = titleStyle.Render(" CHAT_MODE ") + " Enter query: " + m.chatInput + "█" + infoStyle.Render("  [Enter]: Send | [Esc]: Cancel")
+		help = titleStyle.Render(" CHAT_MODE ") + " Next Query: " + m.chatInput + "█" + infoStyle.Render("  [Enter]: Post | [Esc]: Back")
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		headerStyle.Render(fmt.Sprintf(" APEX_TACTICAL_FORENSICS_UNIT // VERSION_1.0_TUI // DATA_FEED: %d_ITEMS ", len(m.reports))),
-		lipgloss.JoinHorizontal(lipgloss.Top, sidebar, detail),
+		topRow,
+		chat,
 		help,
 	)
 }

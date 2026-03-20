@@ -189,11 +189,13 @@ func (s *Server) worker(id int) {
 							}
 						}
 
-						// 3. Analyze with high-context
 						insight = s.ai.AnalyzeReport(report.Message, report.StackTrace+historicalContext, sourceContext)
 
 						// Cache the insight for 24 hours
 						s.rdb.Set(ctx, cacheKey, insight, 24*time.Hour)
+
+						// 4. Quota Safety
+						time.Sleep(5 * time.Second)
 					}
 					report.AiInsight = insight
 				}
