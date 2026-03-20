@@ -1,10 +1,10 @@
 # Apex: The Architecture of Recovery
 
-**Industrial-grade failure forensics. 100% Free. 100% Open Source.**
+**Industrial grade failure forensics. 100% Free. 100% Open Source.**
 
-Apex is a high performance crash monitoring and observability engine built for modern infrastructure. It captures, compresses, and syncs crash report "DNA" from your applications in real time, then uses AI-powered forensics to decode root causes and suggest fixes. Designed with a "Community First" philosophy, it brings enterprise grade capabilities to every developer's terminal.
+Apex is a high performance crash monitoring and observability engine built for modern infrastructure. It captures, compresses and syncs crash report "DNA" from your applications in real time, then uses AI-powered forensics to decode root causes and suggest fixes. Designed with a "Community First" philosophy, it brings enterprise grade capabilities to every developer's terminal.
 
-**Live Demo:** [https://apex-addis.vercel.app](https://apex-addis.vercel.app)
+**Live Demo:** [apex-addis.vercel.app](https://apex-addis.vercel.app)
 
 ---
 
@@ -204,7 +204,7 @@ This single command will:
 
 The fastest way to get started is to use the centralized Command Center:
 
-1. Visit [https://apex-addis.vercel.app](https://apex-addis.vercel.app)
+1. Visit [apex-addis.vercel.app](https://apex-addis.vercel.app)
 2. Sign in with GitHub
 3. Create a project and copy your unique **Ingest Key**
 4. Drop an Edge Agent into your codebase (see [Agent Integration](#agent-integration))
@@ -528,7 +528,7 @@ func main() {
 
     // 3. Configure the agent
     cfg := agent.DefaultConfig()
-    cfg.IngestURL = "https://apex.vercel.app/api/ingest" // Or your self-hosted receiver
+    cfg.IngestURL = "https://apex-addis.vercel.app/api/ingest" // Or your self hosted receiver
     cfg.APIKey = "YOUR_INGEST_KEY"
     cfg.SyncInterval = 30 * time.Second
 
@@ -559,7 +559,7 @@ from agents.python.agent import ApexAgent
 import traceback
 
 agent = ApexAgent(
-    ingest_url="https://apex.vercel.app/api/ingest",
+    ingest_url="https://apex-addis.vercel.app/api/ingest",
     api_key="YOUR_INGEST_KEY"
 )
 
@@ -582,7 +582,7 @@ pip install requests zstandard
 const { ApexAgent } = require('./agents/node/agent');
 
 const agent = new ApexAgent(
-    "https://apex.vercel.app/api/ingest",
+    "https://apex-addis.vercel.app/api/ingest",
     "YOUR_INGEST_KEY"
 );
 
