@@ -121,13 +121,12 @@ def launch_hud():
         try:
             if os.name == "nt":
                 # On Windows, 'start' opens a new persistent console window
-                full_cmd = f'start "APEX_TUI" cmd /k "{tui_cmd}"'
-                subprocess.Popen(full_cmd, shell=True)
+                subprocess.Popen(f"start {tui_cmd}", shell=True)
             else:
-                # On Unix/Mac
+                # On Unix/Mac, we just run it (user might need to run in a new tab manually if preferred)
                 subprocess.Popen(tui_cmd.split())
         except Exception as e:
-            print(f"⚠️ Could not start TUI automatically: {e}")
+            print(f"Could not start TUI automatically: {e}")
             print(f"Manual launch: {tui_cmd}")
     elif shutil.which("docker"):
         # Run via docker
