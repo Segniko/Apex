@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -107,7 +108,16 @@ func (s *Server) warmUpFileCache() {
 func (s *Server) worker(id int) {
 	ctx := context.Background()
 	streamName := "apex_reports"
-	lastID := "0" // Start from the beginning of the stream to catch any backlog
+	offsetKey := "apex:stream:offset"
+
+	// 1. Load the last processed offset from Redis to prevent re-processing history on restart
+	lastID, err := s.rdb.Get(ctx, offsetKey).Result()
+	if err != nil || lastID == "" {
+		lastID = "0" // Fallback to beginning only if no offset is saved
+		slog.Info("No persistent offset found, starting from 0", "worker_id", id)
+	} else {
+		slog.Info("Resuming stream from persistent offset", "worker_id", id, "offset", lastID)
+	}
 
 	for {
 		// Block-read from the Redis Stream
@@ -156,7 +166,8 @@ func (s *Server) worker(id int) {
 				}
 
 				// Run Gemini AI Forensics with Caching
-				fingerprint := generateFingerprint(report.Message, report.StackTrace)
+				scrubbedTrace := scrubStackTrace(report.StackTrace)
+				fingerprint := generateFingerprint(report.Message, scrubbedTrace)
 				cacheKey := "ai_insight:" + fingerprint
 
 				insight, err := s.rdb.Get(ctx, cacheKey).Result()
@@ -191,14 +202,17 @@ func (s *Server) worker(id int) {
 
 						insight = s.ai.AnalyzeReport(report.Message, report.StackTrace+historicalContext, sourceContext)
 
-						// Cache the insight for 24 hours
-						s.rdb.Set(ctx, cacheKey, insight, 24*time.Hour)
+						// Cache the insight for 30 days (extended from 24h for quota safety)
+						s.rdb.Set(ctx, cacheKey, insight, 30*24*time.Hour)
 
 						// 4. Quota Safety
 						time.Sleep(5 * time.Second)
 					}
 					report.AiInsight = insight
 				}
+
+				// Update the persistent offset in Redis
+				s.rdb.Set(ctx, offsetKey, message.ID, 0)
 
 				err = s.store.SaveReport(report, projectID)
 				if err != nil {
@@ -209,6 +223,13 @@ func (s *Server) worker(id int) {
 			}
 		}
 	}
+}
+
+var hexRegex = regexp.MustCompile(`0x[0-9a-fA-F]+`)
+
+func scrubStackTrace(stackTrace string) string {
+	// Remove hex memory addresses to ensure stable fingerprints for caching
+	return hexRegex.ReplaceAllString(stackTrace, "<addr>")
 }
 
 func generateFingerprint(message, stackTrace string) string {

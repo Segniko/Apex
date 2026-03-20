@@ -93,6 +93,7 @@ type model struct {
 
 	configPath string
 	apiKey     string
+	apiBase    string
 	setupInput string
 	showSetup  bool
 }
@@ -136,6 +137,26 @@ func initialModel() *model {
 		m.loading = false
 	}
 
+	// Use NEXT_PUBLIC_API_URL for consistency with the web dashboard
+	if content, err := os.ReadFile(".env"); err == nil {
+		scanner := bufio.NewScanner(bytes.NewReader(content))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "NEXT_PUBLIC_API_URL=") {
+				m.apiBase = strings.TrimPrefix(line, "NEXT_PUBLIC_API_URL=")
+				break
+			}
+		}
+	}
+
+	// Only if .env is missing or doesn't have the key
+	if m.apiBase == "" {
+		m.apiBase = os.Getenv("APEX_API_URL")
+	}
+	if m.apiBase == "" {
+		m.apiBase = "http://localhost:8081"
+	}
+
 	return m
 }
 
@@ -144,7 +165,7 @@ func (m *model) Init() tea.Cmd {
 		return nil
 	}
 	return func() tea.Msg {
-		return fetchReports(m.apiKey)
+		return fetchReports(m.apiBase, m.apiKey)
 	}
 }
 
@@ -167,7 +188,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					data, _ := json.Marshal(cfg)
 					os.WriteFile(m.configPath, data, 0644)
 					return m, func() tea.Msg {
-						return fetchReports(m.apiKey)
+						return fetchReports(m.apiBase, m.apiKey)
 					}
 				}
 			case "backspace":
@@ -214,7 +235,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.loading = true
 			return m, func() tea.Msg {
-				return fetchReports(m.apiKey)
+				return fetchReports(m.apiBase, m.apiKey)
 			}
 		case "enter":
 			if i, ok := m.list.SelectedItem().(ReportItem); ok {
@@ -251,7 +272,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.list.SetSize(35, topHeight-1)
-		
+
 		infoWidth := msg.Width - 40 - h
 		if infoWidth < 10 {
 			infoWidth = 10
@@ -278,7 +299,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chatInput = ""
 		m.updateViewport()
 		return m, func() tea.Msg {
-			startChat(m.program, m.apiKey, msg.reportID, msg.message)
+			startChat(m.program, m.apiBase, m.apiKey, msg.reportID, msg.message)
 			return nil
 		}
 
@@ -400,12 +421,7 @@ type reportsMsg []ReportItem
 type aiChunkMsg string
 type errorMsg error
 
-func fetchReports(apiKey string) tea.Msg {
-	apiBase := os.Getenv("APEX_API_URL")
-	if apiBase == "" {
-		apiBase = "http://localhost:8081"
-	}
-
+func fetchReports(apiBase, apiKey string) tea.Msg {
 	req, _ := http.NewRequest("GET", apiBase+"/api/reports", nil)
 	req.Header.Set("X-Apex-API-Key", apiKey)
 
@@ -423,12 +439,8 @@ func fetchReports(apiKey string) tea.Msg {
 	return reportsMsg(reports)
 }
 
-func startChat(p *tea.Program, apiKey, reportID, message string) {
+func startChat(p *tea.Program, apiBase, apiKey, reportID, message string) {
 	go func() {
-		apiBase := os.Getenv("APEX_API_URL")
-		if apiBase == "" {
-			apiBase = "http://localhost:8081"
-		}
 
 		body, _ := json.Marshal(map[string]string{
 			"report_id": reportID,
