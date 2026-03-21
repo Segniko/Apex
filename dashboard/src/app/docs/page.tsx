@@ -5,10 +5,10 @@ import Link from 'next/link';
 export default function Docs() {
     const milestones = [
         { date: "2026-03-06", title: "Project Inception", desc: "Core Go Engine with Zstd Protobuf DNA & encrypted Vault storage." },
-        { date: "2026-03-06", title: "Amber Industrial UI", desc: "Standardized dashboard theme (strictly zero blue/pink) and high performance Recharts integration." },
-        { date: "2026-03-06", title: "Operational Suite", desc: "Prometheus/Grafana integration. Resolved port 8080 conflicts and routing issues." },
-        { date: "2026-03-06", title: "Intelligence Phase", desc: "AI Root-Cause Forensic panels and Tactical AI Chatbot. Created commercial pitch deck." },
-        { date: "2026-03-06", title: "Enterprise Scaling", desc: "Implemented Redis Ingest Buffer & CockroachDB global persistence. Developed Python Tactical Edge agent." }
+        { date: "2026-03-10", title: "Apex UI", desc: "Standardized dashboard theme and high performance Recharts integration." },
+        { date: "2026-03-14", title: "Infrastructure & Observability", desc: "Prometheus/Grafana integration. Resolved port 8080 conflicts and routing issues." },
+        { date: "2026-03-15", title: "Intelligence Phase", desc: "AI Root Cause Forensic panels and Tactical AI Chatbot. Created commercial pitch deck." },
+        { date: "2026-03-16", title: "Enterprise Scaling", desc: "Implemented Redis Ingest Buffer & CockroachDB global persistence. Developed Python Tactical Edge agent." }
     ];
 
     return (
@@ -41,7 +41,7 @@ export default function Docs() {
                             <div className="space-y-4">
                                 <h3 className="text-xl font-bold italic">The Dashboard</h3>
                                 <p className="text-gray-400 text-sm leading-relaxed">
-                                    Next.js 15 powered frontend utilizing Tailwind CSS v4 and Framer-inspired glassmorphism for real-time failure forensics.
+                                    Next.js 15 powered frontend utilizing Tailwind CSS v4.
                                 </p>
                             </div>
                         </div>
@@ -59,6 +59,18 @@ export default function Docs() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                    <div>
+                        <h2 className="text-[11px] font-black text-[#FFB800] uppercase tracking-[0.3em] mb-8 border-b border-[#222] pb-2">Mission & Community</h2>
+                        <div className="max-w-2xl">
+                            <h3 className="text-xl font-bold italic mb-4">Giving Back</h3>
+                            <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                                Architecture should be shared, not gatekept. Apex is open source because I believe in giving back to the community as much as I possibly can.
+                            </p>
+                            <p className="text-gray-400 text-sm leading-relaxed">
+                                Even though it is not much, I am contributing in the way that I can. The goal is to provide these forensic monitoring tools to anyone who needs to solve complex infrastructure puzzles.
+                            </p>
                         </div>
                     </div>
                 </section>
