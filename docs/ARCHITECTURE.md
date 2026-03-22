@@ -264,7 +264,7 @@ The `TacticalAI` struct wraps the Google Gemini client:
 │  AnalyzeReport(report)                           │
 │  ├── Build prompt with report data               │
 │  ├── Include similar reports (RAG context)       │
-│  ├── Call Gemini gemini-2.0-flash                │
+│  ├── Call Gemini gemini-3-flash-preview          │
 │  └── Return structured forensic analysis         │
 │                                                  │
 │  Chat(message, report)                           │
