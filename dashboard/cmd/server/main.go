@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apex/monitor/pkg/receiver"
-	"github.com/apex/monitor/pkg/storage"
-	apex "github.com/apex/monitor/proto"
+	"github.com/Segniko/Apex/pkg/receiver"
+	"github.com/Segniko/Apex/pkg/storage"
+	apex "github.com/Segniko/Apex/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

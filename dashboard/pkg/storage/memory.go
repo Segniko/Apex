@@ -3,7 +3,7 @@ package storage
 import (
 	"sync"
 
-	apex "github.com/apex/monitor/proto"
+	apex "github.com/Segniko/Apex/proto"
 )
 
 type MemoryStore struct {

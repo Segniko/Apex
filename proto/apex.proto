@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package apex;
 
-option go_package = "github.com/apex/monitor/proto";
+option go_package = "github.com/Segniko/Apex/proto";
 
 // DeviceContext captures the state of the machine at the time of the crash.
 message DeviceContext {

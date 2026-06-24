@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	apex "github.com/apex/monitor/proto"
+	apex "github.com/Segniko/Apex/proto"
 	"github.com/klauspost/compress/zstd"
 	"google.golang.org/protobuf/proto"
 )

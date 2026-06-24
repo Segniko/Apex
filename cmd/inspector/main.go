@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/apex/monitor/pkg/vault"
+	"github.com/Segniko/Apex/pkg/vault"
 )
 
 func main() {

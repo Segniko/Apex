@@ -5,9 +5,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/apex/monitor/pkg/syphon"
-	"github.com/apex/monitor/pkg/vault"
-	apex "github.com/apex/monitor/proto"
+	"github.com/Segniko/Apex/pkg/syphon"
+	"github.com/Segniko/Apex/pkg/vault"
+	apex "github.com/Segniko/Apex/proto"
 	"github.com/google/uuid"
 )
 

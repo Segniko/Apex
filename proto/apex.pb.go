@@ -285,7 +285,7 @@ const file_proto_apex_proto_rawDesc = "" +
 	"\n" +
 	"ai_insight\x18\x06 \x01(\tR\taiInsight\":\n" +
 	"\vBatchReport\x12+\n" +
-	"\areports\x18\x01 \x03(\v2\x11.apex.CrashReportR\areportsB\x1fZ\x1dgithub.com/apex/monitor/protob\x06proto3"
+	"\areports\x18\x01 \x03(\v2\x11.apex.CrashReportR\areportsB\x1fZ\x1dgithub.com/Segniko/Apex/protob\x06proto3"
 
 var (
 	file_proto_apex_proto_rawDescOnce sync.Once

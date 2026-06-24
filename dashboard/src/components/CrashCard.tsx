@@ -1,9 +1,30 @@
-import { CrashReport, resolveReport } from '@/lib/api';
+import { CrashReport, resolveReport, streamSolution } from '@/lib/api';
 import { useState } from 'react';
 
 export function CrashCard({ report, count = 1, isNew = false }: { report: CrashReport; count?: number; isNew?: boolean }) {
     const [isResolved, setIsResolved] = useState(report.resolved);
+    const [solution, setSolution] = useState('');
+    const [decoding, setDecoding] = useState(false);
+    const [asked, setAsked] = useState(false);
     const date = new Date(report.timestamp * 1000).toLocaleString();
+
+    const decodeFix = async () => {
+        if (decoding) return;
+        setAsked(true);
+        setDecoding(true);
+        setSolution('');
+        try {
+            await streamSolution(
+                report.error_id,
+                `Explain the root cause of this crash and give a concise, step-by-step tactical fix. Error: "${report.message}"`,
+                setSolution,
+            );
+        } catch {
+            setSolution('CONNECTION_ERROR: Could not reach the forensics node.');
+        } finally {
+            setDecoding(false);
+        }
+    };
 
     const total = report.context?.total_memory || 0;
     const free = report.context?.free_memory || 0;
@@ -57,15 +78,11 @@ export function CrashCard({ report, count = 1, isNew = false }: { report: CrashR
                 {/* Tactical Actions */}
                 <div className="flex flex-wrap gap-4 mb-8">
                     <button
-                        onClick={() => {
-                            const event = new CustomEvent('apex-chat-context', {
-                                detail: { errorId: report.error_id, message: report.message }
-                            });
-                            window.dispatchEvent(event);
-                        }}
-                        className="flex-1 bg-[#FFB800]/10 border border-[#FFB800]/30 text-[#FFB800] px-4 py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#FFB800] hover:text-black transition-all flex items-center justify-center gap-2"
+                        onClick={decodeFix}
+                        disabled={decoding}
+                        className="flex-1 bg-[#FFB800]/10 border border-[#FFB800]/30 text-[#FFB800] px-4 py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#FFB800] hover:text-black transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                     >
-                        Ask AI about this error
+                        {decoding ? 'Decoding…' : asked ? 'Re-decode fix' : 'Decode fix with AI'}
                     </button>
                     <button
                         onClick={async () => {
@@ -83,7 +100,25 @@ export function CrashCard({ report, count = 1, isNew = false }: { report: CrashR
                     </button>
                 </div>
 
-                {/* AI Insight Panel */}
+                {/* Inline AI solution — streamed below the error, no chatbot */}
+                {asked && (
+                    <div className="bg-[#0d0d0d] border border-[#FFB800]/30 p-5 rounded relative overflow-hidden mb-8">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className={`w-2 h-2 rounded-full bg-[#FFB800] ${decoding ? 'animate-pulse' : ''}`} />
+                            <h4 className="text-[11px] font-black text-[#FFB800] uppercase tracking-widest">Tactical Fix</h4>
+                            {decoding && <span className="text-[10px] font-mono text-[#FFB800]/50">decoding telemetry…</span>}
+                        </div>
+                        {solution ? (
+                            <div className="text-sm text-gray-200 leading-relaxed font-mono whitespace-pre-wrap">
+                                <AIText text={solution} />
+                            </div>
+                        ) : decoding ? (
+                            <div className="text-sm text-[#FFB800]/40 font-mono animate-pulse">Analyzing stack trace…</div>
+                        ) : null}
+                    </div>
+                )}
+
+                {/* AI Insight Panel (pre-computed summary) */}
                 {report.ai_insight && (
                     <div className="bg-[#FFB800]/10 border border-[#FFB800]/30 p-5 rounded relative overflow-hidden">
                         <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#FFB800] text-black text-[10px] font-black uppercase tracking-widest">
@@ -94,7 +129,7 @@ export function CrashCard({ report, count = 1, isNew = false }: { report: CrashR
                             <div className="space-y-2">
                                 <h4 className="text-[11px] font-black text-[#FFB800] uppercase tracking-widest">Root-cause analysis</h4>
                                 <div className="text-sm text-gray-200 leading-relaxed font-mono whitespace-pre-wrap">
-                                    {report.ai_insight}
+                                    <AIText text={report.ai_insight} />
                                 </div>
                             </div>
                         </div>
@@ -102,6 +137,40 @@ export function CrashCard({ report, count = 1, isNew = false }: { report: CrashR
                 )}
             </div>
         </div>
+    );
+}
+
+// Renders streamed AI text, formatting fenced ``` blocks (with +/- diff lines)
+// so fixes are readable inline.
+function AIText({ text }: { text: string }) {
+    return (
+        <>
+            {text.split('```').map((part, index) => {
+                if (index % 2 === 0) return <span key={index}>{part}</span>;
+                const lines = part.split('\n');
+                const lang = lines[0].trim();
+                const code = lines.slice(1).join('\n');
+                const isDiff = lang === 'diff' || code.trim().startsWith('---') || code.trim().startsWith('@@');
+                return (
+                    <div key={index} className="my-2 p-3 bg-black border border-[#FFB800]/10 rounded overflow-x-auto">
+                        {lang && <div className="text-[10px] opacity-40 mb-1 uppercase">{lang}</div>}
+                        <div className="text-xs leading-snug">
+                            {code.split('\n').map((line, li) => (
+                                <div key={li} className={
+                                    isDiff
+                                        ? line.startsWith('+') ? 'text-green-500/80 bg-green-500/5'
+                                            : line.startsWith('-') ? 'text-red-500/80 bg-red-500/5'
+                                                : line.startsWith('@@') ? 'text-[#FFB800]/60' : 'trace-surface'
+                                        : 'trace-surface'
+                                }>
+                                    {line || ' '}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </>
     );
 }
 

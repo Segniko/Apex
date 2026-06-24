@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/apex/monitor/pkg/agent"
-	"github.com/apex/monitor/pkg/syphon"
-	"github.com/apex/monitor/pkg/vault"
+	"github.com/Segniko/Apex/pkg/agent"
+	"github.com/Segniko/Apex/pkg/syphon"
+	"github.com/Segniko/Apex/pkg/vault"
 )
 
 type MockNetwork struct {

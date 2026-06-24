@@ -1,4 +1,4 @@
-module github.com/apex/monitor
+module github.com/Segniko/Apex
 
 go 1.25.0
 

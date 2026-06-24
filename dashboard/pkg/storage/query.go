@@ -1,7 +1,7 @@
 package storage
 
 import (
-	apex "github.com/apex/monitor/proto"
+	apex "github.com/Segniko/Apex/proto"
 )
 
 func (s *Store) GetReports(limit int) ([]*apex.CrashReport, error) {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/klauspost/compress/zstd"
-	apex "github.com/apex/monitor/proto"
+	apex "github.com/Segniko/Apex/proto"
 	"google.golang.org/protobuf/proto"
 )
 

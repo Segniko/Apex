@@ -1,6 +1,6 @@
 package storage
 
-import apex "github.com/apex/monitor/proto"
+import apex "github.com/Segniko/Apex/proto"
 
 // Provider is the interface for all storage implementations.
 type Provider interface {

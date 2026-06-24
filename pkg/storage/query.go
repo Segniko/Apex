@@ -3,7 +3,7 @@ package storage
 import (
 	"database/sql"
 
-	apex "github.com/apex/monitor/proto"
+	apex "github.com/Segniko/Apex/proto"
 )
 
 func (s *Store) GetReports(limit int, projectID string) ([]*apex.CrashReport, error) {

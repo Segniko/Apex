@@ -629,6 +629,7 @@ The Receiver exposes the following HTTP endpoints (default port `8081`):
 |--------|----------|-------------|
 | `GET` | `/reports` | HTML dashboard view of crash reports |
 | `GET` | `/api/reports?project_id={id}` | JSON array of crash reports (up to 50) |
+| `GET` | `/api/issues?project_id={id}&limit={n}&offset={n}` | Deduplicated crash groups with occurrence counts and first/last-seen timestamps |
 
 ### Projects
 
@@ -692,6 +693,8 @@ The Receiver exposes the following HTTP endpoints (default port `8081`):
 - `apex_reports_received_total` -- Total crash reports received
 - `apex_ingest_errors_total` -- Total ingestion errors
 - `apex_ingest_duration_seconds` -- Time spent unpacking and routing batches
+- `apex_db_save_errors_total` -- Failed report persistence attempts
+- `apex_ai_enrich_errors_total` -- Dropped/failed AI enrichment jobs
 
 ---
 
@@ -804,7 +807,13 @@ The dashboard is configured for Vercel deployment via `dashboard/vercel.json`. S
 | `APEX_DASHBOARD_URL` | Receiver | No | Base URL used to build the "Open HUD" link inside alerts. |
 | `APEX_ALLOWED_ORIGINS` | Receiver | No | Comma-separated CORS allowlist. Empty or `*` allows all origins (default). |
 | `APEX_DASHBOARD_SECRET` | Receiver | No | When set, gates mutating dashboard endpoints (create/delete project, resolve). |
-| `NEXT_PUBLIC_DASHBOARD_KEY` | Dashboard | No | Mirrors `APEX_DASHBOARD_SECRET` so the dashboard can call gated endpoints. |
+| `APEX_INTERNAL_SECRET` | Receiver | No | When set, gates read endpoints (reports/issues/projects); only the Next BFF or a valid ingest key may read. |
+| `APEX_RETENTION_DAYS` | Receiver | No | Prune reports older than N days (every 6h). `0` disables. Default `30`. |
+| `APEX_LOCAL_SOURCE` | Receiver | No | Enable reading local source files for AI context (self-hosted dev only). Off by default. |
+| `APEX_SEED_DEMO` | Receiver | No | Seed a read-only demo project with sample crashes on boot. |
+| `NEXT_PUBLIC_DASHBOARD_KEY` | Dashboard | No | Mirrors `APEX_DASHBOARD_SECRET` so the dashboard can call gated mutations. |
+| `NEXT_PUBLIC_USE_BFF` | Dashboard | No | Route reads through the authenticated Next.js BFF (`/api/bff/*`) instead of calling the receiver directly. |
+| `APEX_RECEIVER_URL` | Dashboard | No | Server-side receiver URL the BFF proxies to (defaults to `NEXT_PUBLIC_API_URL`). |
 
 ### Storage Modes
 

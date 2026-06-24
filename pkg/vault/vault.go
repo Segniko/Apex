@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	apex "github.com/apex/monitor/proto"
+	apex "github.com/Segniko/Apex/proto"
 	"google.golang.org/protobuf/proto"
 	_ "modernc.org/sqlite"
 )

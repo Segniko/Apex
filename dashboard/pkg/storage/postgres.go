@@ -3,7 +3,7 @@ package storage
 import (
 	"database/sql"
 
-	apex "github.com/apex/monitor/proto"
+	apex "github.com/Segniko/Apex/proto"
 	_ "github.com/lib/pq"
 )
 

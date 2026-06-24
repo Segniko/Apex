@@ -25,7 +25,26 @@ export interface Project {
     created_at: string;
 }
 
+export interface Issue {
+    fingerprint: string;
+    project_id: string;
+    message: string;
+    stack_trace: string;
+    ai_insight: string;
+    count: number;
+    first_seen: number;
+    last_seen: number;
+    resolved: boolean;
+    error_id: string;
+}
+
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081") + "/api";
+
+// When NEXT_PUBLIC_USE_BFF=1, reads go through same-origin Next route handlers
+// that enforce the session and inject the server-only receiver secret. Otherwise
+// they hit the receiver directly (the original/open behaviour).
+const USE_BFF = process.env.NEXT_PUBLIC_USE_BFF === "1";
+const READ_BASE = USE_BFF ? "/api/bff" : API_BASE;
 
 // Optional shared key for mutating endpoints. Sent only when the deployment
 // configures APEX_DASHBOARD_SECRET / NEXT_PUBLIC_DASHBOARD_KEY; otherwise the
@@ -39,9 +58,9 @@ function mutationHeaders(): Record<string, string> {
 
 export async function fetchReports(projectId?: string): Promise<CrashReport[]> {
     try {
-        const url = projectId 
-            ? `${API_BASE}/reports?project_id=${projectId}` 
-            : `${API_BASE}/reports`;
+        const url = projectId
+            ? `${READ_BASE}/reports?project_id=${projectId}`
+            : `${READ_BASE}/reports`;
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error("Failed to fetch reports");
         const data = await res.json();
@@ -54,8 +73,25 @@ export async function fetchReports(projectId?: string): Promise<CrashReport[]> {
 
 export async function fetchProjects(userID: string): Promise<Project[]> {
     try {
-        const res = await fetch(`${API_BASE}/projects?user_id=${userID}`, { cache: 'no-store' });
+        // Through the BFF the user id comes from the session, not the client.
+        const url = USE_BFF
+            ? `${READ_BASE}/projects`
+            : `${API_BASE}/projects?user_id=${userID}`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error("Failed to fetch projects");
+        const data = await res.json();
+        return data || [];
+    } catch (err) {
+        console.error("API Error:", err);
+        return [];
+    }
+}
+
+export async function fetchIssues(projectId?: string, limit = 50, offset = 0): Promise<Issue[]> {
+    try {
+        const pid = projectId ? encodeURIComponent(projectId) : "";
+        const res = await fetch(`${READ_BASE}/issues?project_id=${pid}&limit=${limit}&offset=${offset}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error("Failed to fetch issues");
         const data = await res.json();
         return data || [];
     } catch (err) {
@@ -110,6 +146,40 @@ export async function resolveReport(reportId: string, resolved: boolean): Promis
     } catch (err) {
         console.error("Failed to resolve report:", err);
         return false;
+    }
+}
+
+// Streams an AI forensic answer for a specific report over SSE, invoking
+// onChunk with the accumulated text as it arrives. Resolves when the stream
+// ends ([DONE]) or the body closes.
+export async function streamSolution(
+    reportId: string,
+    message: string,
+    onChunk: (text: string) => void,
+): Promise<void> {
+    const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, report_id: reportId }),
+    });
+    if (!res.ok || !res.body) throw new Error(`Stream failed: ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let acc = '';
+
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            const content = line.slice(6);
+            if (content.trim() === '[DONE]') return;
+            if (content === '') continue;
+            acc += content;
+            onChunk(acc);
+        }
     }
 }
 
