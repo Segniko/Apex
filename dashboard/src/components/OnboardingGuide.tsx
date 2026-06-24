@@ -10,42 +10,60 @@ interface OnboardingGuideProps {
 export function OnboardingGuide({ project }: OnboardingGuideProps) {
     const [selectedTab, setSelectedTab] = useState<'go' | 'python' | 'node'>('go');
 
+    const ingestUrl = "https://apex-addis.vercel.app/api/ingest";
+
     const snippets = {
-        go: `package main
+        go: `// go get github.com/Segniko/Apex
+package main
 
 import (
-    "github.com/apex-forensics/apex-go/agent"
+    "time"
+    "github.com/Segniko/Apex/pkg/agent"
+    "github.com/Segniko/Apex/pkg/syphon"
+    "github.com/Segniko/Apex/pkg/vault"
 )
 
 func main() {
-    // Initialize Apex Forensics Agent
-    apex := agent.New("${project.ingest_key}")
-    defer apex.Recover() // Captures panics automatically
+    v, _ := vault.New("apex.db", []byte("your-32-byte-encryption-key!!!!!"))
+    defer v.Close()
+    s, _ := syphon.New(nil)
+
+    cfg := agent.DefaultConfig()
+    cfg.IngestURL = "${ingestUrl}"
+    cfg.APIKey = "${project.ingest_key}"
+    cfg.SyncInterval = 30 * time.Second
+
+    a := agent.New(v, s, cfg)
+    defer a.Stop()
+    defer a.CapturePanic() // captures panics automatically
 
     // Your application code...
 }`,
-        python: `from apex_py import ApexAgent
+        python: `# pip install requests zstandard
+from agents.python.agent import ApexAgent
+import traceback
 
-# Initialize the Apex Forensics Agent
-agent = ApexAgent("${project.ingest_key}")
+agent = ApexAgent(
+    ingest_url="${ingestUrl}",
+    api_key="${project.ingest_key}",
+)
 
 try:
-    # Your application logic...
     risky_operation()
 except Exception as e:
-    # Manual capture for non-fatal errors
-    agent.capture_exception(e)`,
-        node: `const { ApexAgent } = require('apex-node');
+    agent.capture_exception(e, traceback.format_exc())`,
+        node: `// cd agents/node && npm install
+const { ApexAgent } = require('./agents/node/agent');
 
-// Initialize the Tactical Forwarder
-const agent = new ApexAgent("${project.ingest_key}");
+const agent = new ApexAgent(
+    "${ingestUrl}",
+    "${project.ingest_key}"
+);
 
-async function run() {
-    try {
-        await riskyTask();
-    } catch (err) {
-        await agent.captureException(err);
-    }
+try {
+    riskyOperation();
+} catch (err) {
+    await agent.captureException(err);
 }`
     };
 
@@ -108,7 +126,7 @@ async function run() {
 
             {/* Footer Tip */}
             <div className="p-6 bg-[#111] text-[10px] text-gray-600 font-mono italic text-center uppercase tracking-widest">
-                System optimized for zero-latency crash forwarding // Verion_1.0_Tactical
+                System optimized for zero-latency crash forwarding · v1.0
             </div>
         </div>
     );

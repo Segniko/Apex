@@ -26,7 +26,7 @@ Apex is a high performance crash monitoring and observability engine built for m
 
 If you're documenting a project:
 
-- Write the core documentation yourself first, feed your manual version + codebase into Code Wiki and then refine the output. Fix any erros and keep only what you actually want or what is needed.
+- Write the core documentation yourself first, feed your manual version + codebase into Code Wiki and then refine the output. Fix any errors and keep only what you actually want or what is needed.
 
 ## Table of Contents
 
@@ -87,6 +87,8 @@ If you're documenting a project:
 - **Project Based Data Isolation** -- Each project gets a unique ingest key, ensuring crash data is isolated per workspace.
 - **RAG Enhanced AI Context** -- AI analysis pulls historical similar reports for retrieval-augmented context, improving forensic accuracy over time.
 - **Resilient Sync with Exponential Backoff** -- The Syphon module retries failed transmissions with exponential backoff and network-aware sync decisions.
+- **Grouped Issues & Live HUD** -- The dashboard deduplicates identical crashes into issues with occurrence counts and a 24h sparkline, plus full-text search, status filters, and an entrance animation when new telemetry streams in.
+- **Webhook Alerting (Slack / Discord)** -- Optional outbound alerts fire the first time each crash signature is seen (deduped per project for one hour) so a developer knows in seconds, not minutes.
 
 ---
 
@@ -491,11 +493,11 @@ A Redis-backed sliding window rate limiter that protects AI quota and prevents a
 ```go
 limiter := limiter.NewRateLimiter(redisClient)
 
-// Allow 400 requests per hour for this key
-allowed, err := limiter.Allow(ctx, "project123:analysis", 400, 1*time.Hour)
+// Allow 100 requests per hour for this key
+allowed, err := limiter.Allow(ctx, "project123:analysis", 100, 1*time.Hour)
 
 // Check remaining quota
-remaining, err := limiter.GetRemaining(ctx, "project123:analysis", 400)
+remaining, err := limiter.GetRemaining(ctx, "project123:analysis", 100)
 ```
 
 The limiter fails closed (denies) when Redis is unavailable to protect downstream AI resources.
@@ -596,6 +598,7 @@ try {
 
 **Dependencies:** `uuid`, `fzstd`
 
+```bash
 cd agents/node
 npm install
 ```
@@ -797,6 +800,11 @@ The dashboard is configured for Vercel deployment via `dashboard/vercel.json`. S
 | `AUTH_SECRET` | Dashboard | Yes | NextAuth.js secret for session encryption. |
 | `AUTH_GITHUB_ID` | Dashboard | Yes | GitHub OAuth App Client ID. |
 | `AUTH_GITHUB_SECRET` | Dashboard | Yes | GitHub OAuth App Client Secret. |
+| `APEX_WEBHOOK_URL` | Receiver | No | Slack/Discord/generic JSON webhook for crash alerts. Disabled when unset. |
+| `APEX_DASHBOARD_URL` | Receiver | No | Base URL used to build the "Open HUD" link inside alerts. |
+| `APEX_ALLOWED_ORIGINS` | Receiver | No | Comma-separated CORS allowlist. Empty or `*` allows all origins (default). |
+| `APEX_DASHBOARD_SECRET` | Receiver | No | When set, gates mutating dashboard endpoints (create/delete project, resolve). |
+| `NEXT_PUBLIC_DASHBOARD_KEY` | Dashboard | No | Mirrors `APEX_DASHBOARD_SECRET` so the dashboard can call gated endpoints. |
 
 ### Storage Modes
 

@@ -27,6 +27,16 @@ export interface Project {
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081") + "/api";
 
+// Optional shared key for mutating endpoints. Sent only when the deployment
+// configures APEX_DASHBOARD_SECRET / NEXT_PUBLIC_DASHBOARD_KEY; otherwise the
+// header is omitted and the open (demo) behaviour is preserved.
+function mutationHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const key = process.env.NEXT_PUBLIC_DASHBOARD_KEY;
+    if (key) headers["X-Apex-Dashboard-Key"] = key;
+    return headers;
+}
+
 export async function fetchReports(projectId?: string): Promise<CrashReport[]> {
     try {
         const url = projectId 
@@ -57,10 +67,9 @@ export async function fetchProjects(userID: string): Promise<Project[]> {
 export async function createProject(userID: string, name: string): Promise<Project | null> {
     try {
         const url = `${API_BASE}/projects/create`;
-        console.log(`[APEX] Attempting to create project: ${url}`, { userID, name });
         const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: mutationHeaders(),
             body: JSON.stringify({ user_id: userID, name }),
         });
         if (!res.ok) {
@@ -94,7 +103,7 @@ export async function resolveReport(reportId: string, resolved: boolean): Promis
     try {
         const res = await fetch(`${API_BASE}/reports/resolve?id=${reportId}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: mutationHeaders(),
             body: JSON.stringify({ resolved }),
         });
         return res.ok;
@@ -108,6 +117,7 @@ export async function deleteProject(projectId: string): Promise<boolean> {
     try {
         const res = await fetch(`${API_BASE}/projects/delete?id=${projectId}`, {
             method: 'DELETE',
+            headers: mutationHeaders(),
         });
         return res.ok;
     } catch (err) {

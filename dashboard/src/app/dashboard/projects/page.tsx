@@ -42,9 +42,7 @@ export default function ProjectsHub() {
 
         if (status === 'loading') return;
 
-        // Diagnostic: Log current session state
         const userId = (session?.user as any)?.id || session?.user?.email || session?.user?.name || 'anonymous';
-        console.log(`[APEX_DEBUG] Projects Hub Effect - Status: ${status}, UserID: ${userId}`);
 
         if (status === 'authenticated') {
             fetchProjects(userId).then((data) => {
@@ -59,7 +57,6 @@ export default function ProjectsHub() {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         const userId = (session?.user as any)?.id || session?.user?.email || session?.user?.name || 'anonymous';
-        console.log(`[APEX_DEBUG] Creating project for UserID: ${userId}`);
 
         if (!projectName.trim()) return;
 

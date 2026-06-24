@@ -26,6 +26,14 @@
     background-color: var(--color-bg-deep);
     color: #E5E5E5;
     font-family: 'Inter', system-ui, sans-serif;
+    /* Slightly larger base for readability under stress */
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Code / traces read better with a calm, neutral mono treatment */
+  code, pre {
+    font-variant-ligatures: none;
   }
 }
 
@@ -47,6 +55,11 @@
 
   .text-brand {
     color: var(--color-brand);
+  }
+
+  /* Calm, readable stack-trace surface (neutral text, selective highlight) */
+  .trace-surface {
+    color: #C9C9C9;
   }
 
   .hazard-pattern {
@@ -117,6 +130,26 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* New-crash entrance: the "money moment" when live telemetry lands */
+.animate-crash-in {
+  animation: crash-in 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes crash-in {
+  0% { transform: translateY(-12px); opacity: 0; box-shadow: 0 0 0 0 rgba(255, 77, 0, 0.6); }
+  60% { box-shadow: 0 0 26px -4px rgba(255, 77, 0, 0.5); }
+  100% { transform: translateY(0); opacity: 1; box-shadow: 0 0 0 0 rgba(255, 77, 0, 0); }
+}
+
+@keyframes reveal-up {
+  0% { transform: translateY(24px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.reveal-up {
+  animation: reveal-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* Custom Scrollbar */
 
 ::-webkit-scrollbar {
@@ -134,4 +167,20 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-brand);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respect users who ask for less motion — accessibility + battery on always-open HUDs */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

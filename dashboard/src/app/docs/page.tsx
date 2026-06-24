@@ -35,13 +35,13 @@ export default function Docs() {
                             <div className="space-y-4">
                                 <h3 className="text-xl font-bold italic">The Core Engine</h3>
                                 <p className="text-gray-400 text-sm leading-relaxed">
-                                    Built in Go 1.24, the receiver handles thousands of concurrent reports using a distributed worker pool and structured logging.
+                                    Built in Go 1.25, the receiver handles high volumes of concurrent reports using a Redis-buffered worker pipeline and structured logging.
                                 </p>
                             </div>
                             <div className="space-y-4">
                                 <h3 className="text-xl font-bold italic">The Dashboard</h3>
                                 <p className="text-gray-400 text-sm leading-relaxed">
-                                    Next.js 15 powered frontend utilizing Tailwind CSS v4.
+                                    Next.js 16 + React 19 frontend utilizing Tailwind CSS v4, with grouped issues, live forensics feed, and AI chat.
                                 </p>
                             </div>
                         </div>
@@ -76,8 +76,8 @@ export default function Docs() {
                 </section>
             </main>
 
-            <footer className="py-20 text-center text-[9px] font-mono text-gray-800 tracking-[0.4em] uppercase">
-                Apex Systems Engineering // Internal_Only_v1
+            <footer className="py-20 text-center text-[10px] font-mono text-gray-600 tracking-[0.4em] uppercase">
+                Apex Systems Engineering · Open Source · MIT
             </footer>
         </div>
     );

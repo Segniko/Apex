@@ -18,6 +18,7 @@ import (
 	"time"
 
 	tacticalai "github.com/apex/monitor/pkg/ai"
+	"github.com/apex/monitor/pkg/alert"
 	"github.com/apex/monitor/pkg/limiter"
 	"github.com/apex/monitor/pkg/receiver"
 	"github.com/apex/monitor/pkg/storage"
@@ -54,6 +55,7 @@ type Server struct {
 	recv         *receiver.Receiver
 	ai           *tacticalai.TacticalAI
 	limiter      *limiter.RateLimiter
+	alerter      *alert.Notifier
 	isPersistent bool
 	fileCache    map[string][]string
 	cacheOnce    sync.Once
@@ -67,8 +69,13 @@ func NewServer(store storage.Provider, rdb *redis.Client, geminiKey string) *Ser
 		recv:         recv,
 		ai:           tacticalai.NewTacticalAI(geminiKey),
 		limiter:      limiter.NewRateLimiter(rdb),
+		alerter:      alert.New(os.Getenv("APEX_WEBHOOK_URL"), os.Getenv("APEX_DASHBOARD_URL")),
 		isPersistent: false, // Will be set in main
 		fileCache:    make(map[string][]string),
+	}
+
+	if s.alerter.Enabled() {
+		slog.Info("[APEX_SERVER] Crash alerting enabled (webhook configured)")
 	}
 
 	// Warm up the file cache in the background to avoid blocking startup
@@ -219,6 +226,22 @@ func (s *Server) worker(id int) {
 					slog.Error("Failed to save report", "worker_id", id, "error", err, "project_id", projectID)
 				} else {
 					slog.Info("Report processed from Redis", "worker_id", id, "crash_id", report.ErrorId, "project_id", projectID)
+
+					// Fire an external alert for newly-seen crash signatures.
+					// Dedupe per fingerprint+project for 1h so a crash loop
+					// doesn't flood the channel.
+					if s.alerter.Enabled() {
+						dedupeKey := "alert:sent:" + projectID + ":" + fingerprint
+						if ok, _ := s.rdb.SetNX(ctx, dedupeKey, 1, time.Hour).Result(); ok {
+							go s.alerter.Notify(context.Background(), alert.Crash{
+								ProjectID: projectID,
+								ErrorID:   report.ErrorId,
+								Message:   report.Message,
+								Stack:     report.StackTrace,
+								Insight:   report.AiInsight,
+							})
+						}
+					}
 				}
 			}
 		}
@@ -767,9 +790,9 @@ func main() {
 	http.HandleFunc("/api/reports", corsMiddleware(srv.handleGetReportsJSON))
 	http.HandleFunc("/api/chat", corsMiddleware(srv.handleChat))
 	http.HandleFunc("/api/projects", corsMiddleware(srv.handleGetProjects))
-	http.HandleFunc("/api/projects/create", corsMiddleware(srv.handleCreateProject))
-	http.HandleFunc("/api/projects/delete", corsMiddleware(srv.handleDeleteProject))
-	http.HandleFunc("/api/reports/resolve", corsMiddleware(srv.handleResolveReport))
+	http.HandleFunc("/api/projects/create", corsMiddleware(dashboardGate(srv.handleCreateProject)))
+	http.HandleFunc("/api/projects/delete", corsMiddleware(dashboardGate(srv.handleDeleteProject)))
+	http.HandleFunc("/api/reports/resolve", corsMiddleware(dashboardGate(srv.handleResolveReport)))
 	http.HandleFunc("/api/status", corsMiddleware(srv.handleStatus))
 	http.Handle("/metrics", promhttp.Handler())
 
@@ -782,17 +805,56 @@ func main() {
 	http.ListenAndServe(":"+port, nil)
 }
 
+// resolveAllowedOrigin echoes the request Origin when it is permitted by
+// APEX_ALLOWED_ORIGINS (comma-separated). When that env is empty or "*",
+// every origin is allowed (backward-compatible default for the public demo).
+func resolveAllowedOrigin(reqOrigin string) string {
+	allowed := strings.TrimSpace(os.Getenv("APEX_ALLOWED_ORIGINS"))
+	if allowed == "" || allowed == "*" {
+		return "*"
+	}
+	for _, o := range strings.Split(allowed, ",") {
+		if strings.EqualFold(strings.TrimSpace(o), reqOrigin) {
+			return reqOrigin
+		}
+	}
+	return "" // not allowed
+}
+
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := resolveAllowedOrigin(r.Header.Get("Origin"))
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			if origin != "*" {
+				w.Header().Set("Vary", "Origin")
+			}
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Apex-API-Key")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Apex-API-Key, X-Apex-Dashboard-Key")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
+		next(w, r)
+	}
+}
+
+// dashboardGate optionally protects mutating dashboard endpoints. When
+// APEX_DASHBOARD_SECRET is set, callers must present it via the
+// X-Apex-Dashboard-Key header. When unset, the gate is a no-op so existing
+// open/demo deployments keep working unchanged.
+func dashboardGate(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		secret := strings.TrimSpace(os.Getenv("APEX_DASHBOARD_SECRET"))
+		if secret != "" && r.Method != http.MethodOptions {
+			if r.Header.Get("X-Apex-Dashboard-Key") != secret {
+				http.Error(w, "Unauthorized: invalid dashboard key", http.StatusUnauthorized)
+				return
+			}
+		}
 		next(w, r)
 	}
 }

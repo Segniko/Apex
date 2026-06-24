@@ -150,7 +150,7 @@ export function TacticalChat() {
                                                                     isDiff ? (
                                                                         line.startsWith('+') ? 'text-green-500/80 bg-green-500/5' :
                                                                         line.startsWith('-') ? 'text-red-500/80 bg-red-500/5' :
-                                                                        line.startsWith('@@') ? 'text-blue-400/60' : ''
+                                                                        line.startsWith('@@') ? 'text-[#FFB800]/60' : ''
                                                                     ) : ''
                                                                 }>
                                                                     {line}
