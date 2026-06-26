@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -44,7 +45,14 @@ export default function LandingPage() {
       <nav className="absolute top-0 w-full z-50 flex justify-between items-center px-6 md:px-12 py-6 md:py-8">
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 bg-[#FFB800] animate-pulse" />
-          <span className="font-black italic text-2xl tracking-tighter uppercase text-white shadow-[0_0_15px_rgba(255,184,0,0.2)]">APEX</span>
+          <Image
+            src="/apex-logo.png"
+            alt="Apex"
+            width={584}
+            height={276}
+            priority
+            className="h-8 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,184,0,0.25)]"
+          />
         </div>
         <div className="gap-8 items-center text-xs font-mono font-bold uppercase tracking-widest text-gray-400 hidden md:flex">
           <Link href="/docs" className="hover:text-[#FFB800] transition-colors">Mission Log</Link>
