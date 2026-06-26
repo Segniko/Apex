@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 function Reveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -142,8 +142,8 @@ export default function LandingPage() {
           <Reveal className="space-y-8">
             <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter">Democratizing <span className="text-[#FFB800]">Observability.</span></h2>
             <div className="space-y-6 text-gray-300 font-mono text-sm leading-relaxed">
-              <p>Observability shouldn&apos;t be a luxury. We believe every engineer—from students to enterprise architects—deserves access to high-fidelity failure forensics.</p>
-              <p>Apex isn&apos;t just a tool; it&apos;s a statement. We&apos;ve taken the technology used by trillion-dollar giants and made it accessible to everyone, for free.</p>
+              <p>Observability shouldn&apos;t be a luxury. I believe every engineer from students to enterprise architects—deserves access to high-fidelity failure forensics.</p>
+              <p>Apex isn&apos;t just a tool; it&apos;s a statement. I&apos;ve taken the technology used by trillion dollar giants and made it accessible to everyone, for free.</p>
               <ul className="space-y-4">
                 <li className="flex gap-3"><span className="text-[#FFB800]">●</span> No hidden fees, no &quot;Pro&quot; features</li>
                 <li className="flex gap-3"><span className="text-[#FFB800]">●</span> Fully self-hostable on any cloud</li>
