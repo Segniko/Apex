@@ -57,6 +57,7 @@ export default function LandingPage() {
         <div className="gap-8 items-center text-xs font-mono font-bold uppercase tracking-widest text-gray-400 hidden md:flex">
           <Link href="/docs" className="hover:text-[#FFB800] transition-colors">Mission Log</Link>
           <a href="https://github.com/Segniko/Apex" target="_blank" className="hover:text-[#FFB800] transition-colors">GitHub</a>
+          <a href="https://www.gurshaplus.com/segni" target="_blank" className="hover:text-[#FFB800] transition-colors bg-[#FFB800]/10 px-3 py-1 border border-[#FFB800]/30 rounded flex items-center gap-2">☕ Buy me a coffee</a>
           <Link href={dashboardLink} className="border border-[#FFB800] text-[#FFB800] px-6 py-3 hover:bg-[#FFB800] hover:text-black transition-colors shadow-[0_0_20px_rgba(255,184,0,0.2)]">
             Command Center
           </Link>
